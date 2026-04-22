@@ -1,0 +1,93 @@
+{
+  "name": "QuantForge · Daily Risk Check",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "cronExpression", "expression": "0 8 * * 1-5" } ] }
+      },
+      "name": "Every weekday 8am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [ 260, 300 ]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.QUANTFORGE_API_BASE || 'http://api:8000'}}/v1/market/data/SPY",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "start", "value": "={{ new Date(Date.now() - 400*86400000).toISOString().slice(0,10) }}" },
+            { "name": "end",   "value": "={{ new Date().toISOString().slice(0,10) }}" },
+            { "name": "sample","value": "400" }
+          ]
+        },
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "name": "Fetch SPY",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 520, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "qf-api-key", "name": "QuantForge API Key" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const bars = $json.bars || [];\nconst rets = [];\nfor (let i = 1; i < bars.length; i++) rets.push(bars[i].close / bars[i-1].close - 1);\nreturn [{ json: { returns: rets, last_close: bars[bars.length-1]?.close, ticker: $json.ticker } }];"
+      },
+      "name": "Compute returns",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 780, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.QUANTFORGE_API_BASE || 'http://api:8000'}}/v1/risk/var",
+        "sendBody": true,
+        "jsonBody": "={{ { returns: $json.returns, confidence: 0.99, method: 'cornish_fisher' } }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "name": "Compute VaR(99%)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 1040, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "qf-api-key", "name": "QuantForge API Key" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "combinator": "and" },
+          "conditions": [
+            { "leftValue": "={{ $json.var }}", "rightValue": 0.025, "operator": { "type": "number", "operation": "gte" } }
+          ]
+        }
+      },
+      "name": "VaR breach?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [ 1300, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_URL}}",
+        "sendBody": true,
+        "jsonBody": "={{ { text: ':warning: SPY daily VaR (99%, Cornish-Fisher) = ' + ($json.var * 100).toFixed(2) + '% — threshold 2.5% exceeded.' } }}"
+      },
+      "name": "Slack alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 1560, 240 ]
+    }
+  ],
+  "connections": {
+    "Every weekday 8am": { "main": [[ { "node": "Fetch SPY", "type": "main", "index": 0 } ]] },
+    "Fetch SPY":        { "main": [[ { "node": "Compute returns", "type": "main", "index": 0 } ]] },
+    "Compute returns":  { "main": [[ { "node": "Compute VaR(99%)", "type": "main", "index": 0 } ]] },
+    "Compute VaR(99%)": { "main": [[ { "node": "VaR breach?", "type": "main", "index": 0 } ]] },
+    "VaR breach?":      { "main": [[ { "node": "Slack alert", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1"
+}

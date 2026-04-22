@@ -1,0 +1,47 @@
+{
+  "name": "QuantForge · Options Alert Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "options-price",
+        "responseMode": "lastNode"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [ 260, 300 ],
+      "webhookId": "options-price-1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.QUANTFORGE_API_BASE || 'http://api:8000'}}/v1/options/price",
+        "sendBody": true,
+        "jsonBody": "={{ $json.body }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth"
+      },
+      "name": "Price option",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 500, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "qf-api-key", "name": "QuantForge API Key" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\nreturn [{ json: {\n  price: r.black_scholes,\n  crr_american: r.crr_american,\n  greeks: r.greeks,\n  monte_carlo: r.monte_carlo,\n  mc_stderr: r.monte_carlo_stderr,\n  summary: `BS=${r.black_scholes.toFixed(4)}  Δ=${r.greeks.delta.toFixed(3)}  Γ=${r.greeks.gamma.toFixed(4)}  Vega=${r.greeks.vega.toFixed(2)}`,\n} }];"
+      },
+      "name": "Format response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 740, 300 ]
+    }
+  ],
+  "connections": {
+    "Webhook":        { "main": [[ { "node": "Price option", "type": "main", "index": 0 } ]] },
+    "Price option":   { "main": [[ { "node": "Format response", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1"
+}

@@ -1,0 +1,98 @@
+{
+  "name": "QuantForge · Weekly Tournament",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "cronExpression", "expression": "0 7 * * 1" } ] }
+      },
+      "name": "Every Monday 7am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [ 260, 300 ]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "name": "Split strategies",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [ 500, 300 ]
+    },
+    {
+      "parameters": {
+        "values": {
+          "values": [
+            { "name": "items", "type": "array", "arrayValue": [
+              { "type": "object", "objectValue": { "strategy": "buy_and_hold",        "tickers": ["SPY"],                             "sizing": 1.0,  "rebalance": "bar" } },
+              { "type": "object", "objectValue": { "strategy": "momentum",            "tickers": ["SPY","QQQ","IWM","TLT","GLD"], "sizing": 0.2,  "rebalance": "monthly", "params": { "lookback": 120 } } },
+              { "type": "object", "objectValue": { "strategy": "dual_momentum",       "tickers": ["SPY","QQQ","IWM","TLT","GLD"], "sizing": 1.0,  "rebalance": "monthly" } },
+              { "type": "object", "objectValue": { "strategy": "regime_switch",       "tickers": ["SPY","TLT"],                    "sizing": 1.0,  "rebalance": "monthly" } },
+              { "type": "object", "objectValue": { "strategy": "cross_sec_momentum",  "tickers": ["SPY","QQQ","IWM","TLT","GLD"], "sizing": 0.25, "rebalance": "monthly" } },
+              { "type": "object", "objectValue": { "strategy": "vol_target_momentum", "tickers": ["SPY","QQQ","IWM","TLT","GLD"], "sizing": 0.2,  "rebalance": "monthly" } }
+            ] }
+          ]
+        }
+      },
+      "name": "Strategy list",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [ 740, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.QUANTFORGE_API_BASE || 'http://api:8000'}}/v1/backtest",
+        "sendBody": true,
+        "jsonBody": "={{ { strategy: $json.strategy, params: $json.params || {}, tickers: $json.tickers, start: '2015-01-01', end: new Date().toISOString().slice(0,10), capital: 100000, sizing_fraction: $json.sizing, rebalance: $json.rebalance } }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": { "timeout": 120000 }
+      },
+      "name": "Run backtest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 980, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "qf-api-key", "name": "QuantForge API Key" } }
+    },
+    {
+      "parameters": {},
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [ 1220, 300 ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = ($json.data || []).map(r => `${r.strategy.padEnd(22)} ret=${(r.summary_stats.total_return*100).toFixed(1).padStart(6)}%  sharpe=${r.summary_stats.sharpe.toFixed(2).padStart(5)}  mdd=${(r.summary_stats.max_drawdown*100).toFixed(1).padStart(5)}%  trades=${r.n_trades}`);\nreturn [{ json: { text: '```QuantForge weekly tournament\\n' + rows.join('\\n') + '\\n```' } }];"
+      },
+      "name": "Format message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 1460, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_URL}}",
+        "sendBody": true,
+        "jsonBody": "={{ { text: $json.text } }}"
+      },
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 1700, 300 ]
+    }
+  ],
+  "connections": {
+    "Every Monday 7am": { "main": [[ { "node": "Strategy list", "type": "main", "index": 0 } ]] },
+    "Strategy list":    { "main": [[ { "node": "Split strategies", "type": "main", "index": 0 } ]] },
+    "Split strategies": { "main": [[ { "node": "Run backtest", "type": "main", "index": 0 } ]] },
+    "Run backtest":     { "main": [[ { "node": "Aggregate", "type": "main", "index": 0 } ]] },
+    "Aggregate":        { "main": [[ { "node": "Format message", "type": "main", "index": 0 } ]] },
+    "Format message":   { "main": [[ { "node": "Post to Slack", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1"
+}

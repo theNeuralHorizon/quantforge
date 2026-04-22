@@ -1,0 +1,58 @@
+{
+  "name": "QuantForge · Monthly ML Retrain",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "cronExpression", "expression": "0 9 1 * *" } ] }
+      },
+      "name": "1st of month 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [ 260, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.QUANTFORGE_API_BASE || 'http://api:8000'}}/v1/ml/train",
+        "sendBody": true,
+        "jsonBody": "={{ { ticker: 'SPY', start: '2010-01-01', end: new Date().toISOString().slice(0,10), n_estimators: 200, max_depth: 3, learning_rate: 0.05 } }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "options": { "timeout": 180000 }
+      },
+      "name": "Retrain GBM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 500, 300 ],
+      "credentials": { "httpHeaderAuth": { "id": "qf-api-key", "name": "QuantForge API Key" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\nconst top = Object.entries(r.top_features || {}).slice(0,5).map(([k,v]) => `  ${k}: ${v.toFixed(3)}`).join('\\n');\nconst msg = `*QuantForge · Monthly retrain (${new Date().toISOString().slice(0,10)})*\\n\\n` +\n  `Train acc: ${r.train_acc.toFixed(4)}  |  AUC: ${r.train_auc.toFixed(4)}\\n` +\n  `Val acc:   ${r.val_acc.toFixed(4)}  |  AUC: ${r.val_auc.toFixed(4)}\\n` +\n  `Test acc:  ${r.test_acc.toFixed(4)}  |  AUC: ${r.test_auc.toFixed(4)}\\n` +\n  `Baseline:  ${r.baseline_acc.toFixed(4)}\\n\\n` +\n  `Top features:\\n${top}`;\nreturn [{ json: { text: msg } }];"
+      },
+      "name": "Format report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [ 740, 300 ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.SLACK_WEBHOOK_URL}}",
+        "sendBody": true,
+        "jsonBody": "={{ { text: $json.text } }}"
+      },
+      "name": "Post to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [ 980, 300 ]
+    }
+  ],
+  "connections": {
+    "1st of month 9am": { "main": [[ { "node": "Retrain GBM", "type": "main", "index": 0 } ]] },
+    "Retrain GBM":      { "main": [[ { "node": "Format report", "type": "main", "index": 0 } ]] },
+    "Format report":    { "main": [[ { "node": "Post to Slack", "type": "main", "index": 0 } ]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "versionId": "1"
+}
