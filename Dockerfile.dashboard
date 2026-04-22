@@ -1,0 +1,25 @@
+# Streamlit dashboard container
+FROM python:3.12-slim AS runtime
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app \
+    PIP_NO_CACHE_DIR=1
+
+RUN groupadd -r qf && useradd -r -g qf -u 10001 -d /app -s /usr/sbin/nologin qf
+WORKDIR /app
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY quantforge/ ./quantforge/
+COPY .streamlit/ ./.streamlit/
+RUN mkdir -p /app/data/cache && chown -R qf:qf /app
+
+USER qf
+EXPOSE 8501
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=3).read()" \
+    || exit 1
+
+CMD ["python", "-m", "streamlit", "run", "quantforge/dashboard/app.py", \
+     "--server.port=8501", "--server.address=0.0.0.0", \
+     "--server.headless=true", "--server.runOnSave=false"]

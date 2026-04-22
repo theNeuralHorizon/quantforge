@@ -1,0 +1,61 @@
+# Default-deny with explicit allow rules.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: quantforge
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-allow
+  namespace: quantforge
+spec:
+  podSelector:
+    matchLabels: { app: quantforge-api }
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+      ports:
+        - { protocol: TCP, port: 8000 }
+  egress:
+    # to redis
+    - to:
+        - podSelector:
+            matchLabels: { app: redis }
+      ports:
+        - { protocol: TCP, port: 6379 }
+    # to DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+    # to yfinance / internet (HTTPS)
+    - to:
+        - ipBlock: { cidr: 0.0.0.0/0, except: ["169.254.0.0/16", "10.0.0.0/8", "192.168.0.0/16"] }
+      ports:
+        - { protocol: TCP, port: 443 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: redis-allow
+  namespace: quantforge
+spec:
+  podSelector:
+    matchLabels: { app: redis }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: quantforge-api }
+      ports:
+        - { protocol: TCP, port: 6379 }

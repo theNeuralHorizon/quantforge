@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: quantforge-config
+  namespace: quantforge
+data:
+  REDIS_URL: "redis://redis:6379/0"
+  QUANTFORGE_LOG_LEVEL: "INFO"
+  QUANTFORGE_CORS_ORIGINS: "https://quantforge.example.com"

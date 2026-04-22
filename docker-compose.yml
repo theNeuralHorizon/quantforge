@@ -1,0 +1,59 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks: [qfnet]
+    # redis only exposed within the compose network; NOT on host
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      QUANTFORGE_LOG_LEVEL: "INFO"
+      # In prod, override this with real hashed keys; unset = dev auto-key
+      QUANTFORGE_API_KEYS: "${QUANTFORGE_API_KEYS:-}"
+      QUANTFORGE_CORS_ORIGINS: "${QUANTFORGE_CORS_ORIGINS:-http://localhost:3000,http://localhost:8501}"
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports: ["8000:8000"]
+    volumes: ["./data/cache:/app/data/cache"]
+    networks: [qfnet]
+    deploy:
+      resources:
+        limits: { cpus: "2.0", memory: 1G }
+    security_opt: ["no-new-privileges:true"]
+    read_only: false  # scipy/numpy need /tmp; set true + mount tmpfs if needed
+    cap_drop: ["ALL"]
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    restart: unless-stopped
+    environment:
+      QUANTFORGE_API_BASE: "http://api:8000"
+    depends_on:
+      api:
+        condition: service_started
+    ports: ["8501:8501"]
+    volumes: ["./data/cache:/app/data/cache"]
+    networks: [qfnet]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+networks:
+  qfnet: { driver: bridge }
+
+volumes:
+  redis-data:
