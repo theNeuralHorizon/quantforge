@@ -1,0 +1,18 @@
+title = "QuantForge gitleaks config"
+
+[allowlist]
+description = "allowlist for tests/docs"
+paths = [
+  '''tests/.*''',
+  '''docs/.*\.md''',
+  '''\.github/.*\.yml''',
+  '''SECURITY\.md''',
+  '''k8s/secret\.yaml''',
+]
+regexes = [
+  '''REPLACE_ME_WITH_REAL_HASHED_KEYS''',
+  '''your-real-key''',
+  '''dev_test_key_12345''',
+  '''test_key_1234567890''',
+  '''qf_dev_''',
+]
