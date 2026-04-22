@@ -2,21 +2,20 @@
 
 **A Full-Stack Quantitative Trading Research Platform**
 
-Built in a single session. **304 tests, 0 failing. 60+ Python files. 11 modules. 11 end-to-end examples. Streamlit dashboard. CLI.**
+![tests](https://img.shields.io/badge/tests-322%20passing-brightgreen) ![coverage](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue) ![license](https://img.shields.io/badge/license-MIT-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) ![k8s](https://img.shields.io/badge/kubernetes-ready-326ce5)
 
-QuantForge is an end-to-end quant research library covering:
-- Synthetic + historical data ingestion
-- 25+ technical & statistical indicators
-- Event-driven backtesting with realistic broker simulation
-- 8 built-in trading strategies (momentum, mean reversion, pairs, factor, ML, ...)
-- Options pricing (Black-Scholes, CRR binomial, Monte Carlo exotics, Greeks)
-- 5 portfolio optimizers (Markowitz, ERC, Black-Litterman, HRP, CVaR)
-- Fixed-income analytics (duration, convexity, Nelson-Siegel yield curves)
-- Risk analytics (VaR, CVaR, stress tests, drawdown, Kelly sizing, Monte Carlo)
-- ML features, regime detection, factor models
-- Performance analytics, tearsheets, attribution
-- Interactive Streamlit dashboard
-- CLI for scripting
+QuantForge is an end-to-end quant research stack: Python library + hardened REST API + web terminal + dashboard + CLI, all in one repo.
+
+**What's in the box**
+- **Library** — 12 strategies, 25+ indicators, options pricing, portfolio optimizers, risk analytics, ML trainer
+- **REST API** — FastAPI with API-key auth, rate limiting, Prometheus metrics, full OpenAPI docs
+- **Web terminal** — Tailwind + ApexCharts + Alpine.js single-page app served at `/ui/`
+- **Streamlit dashboard** — 8 pages for interactive research
+- **CLI** — `python -m quantforge {price,iv,backtest,tournament,tearsheet}`
+- **Deployment** — multi-stage Dockerfiles, docker-compose, hardened Kubernetes manifests with HPA + NetworkPolicy
+- **CI/CD** — GitHub Actions with test matrix, bandit, safety, CodeQL, gitleaks, Trivy container scan
+- **n8n integrations** — 4 ready-to-import workflow JSONs (daily VaR alerts, weekly tournament, monthly ML retrain, options webhook)
+- **Security** — SECURITY.md with full threat model, CSP, HSTS, non-root containers, secret hashing
 
 ## Modules
 
