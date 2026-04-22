@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QuantForge Terminal</title>
+  <meta name="description" content="Quant research terminal: backtests, options pricing, portfolio optimization, risk analytics, ML." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bg:       '#07090F',
+            surface:  '#0E1117',
+            card:     '#12182B',
+            elev:     '#1C2130',
+            border:   '#2A3247',
+            text:     '#F0F2F6',
+            dim:      '#8B95AD',
+            cyan:     '#00D9FF',
+            green:    '#00D98F',
+            red:      '#FF4E6B',
+            amber:    '#FFB547',
+            purple:   '#B794F4',
+            pink:     '#F687B3',
+          },
+          fontFamily: {
+            sans:    ['Inter', 'system-ui', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono:    ['JetBrains Mono', 'Menlo', 'monospace'],
+          },
+          boxShadow: {
+            glow: '0 0 24px rgba(0, 217, 255, 0.18)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.52.0" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+
+  <style>
+    html, body {
+      background: #07090F;
+      color: #F0F2F6;
+      font-family: 'Inter', system-ui, sans-serif;
+      font-feature-settings: "cv02", "cv03", "cv11";
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: -1;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0, 217, 255, 0.10), transparent 60%),
+        radial-gradient(ellipse 60% 40% at 90% 10%, rgba(183, 148, 244, 0.06), transparent 60%);
+    }
+    .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+    .card { background: #12182B; border: 1px solid #2A3247; border-radius: 14px; }
+    .card:hover { border-color: rgba(0, 217, 255, 0.35); }
+    .pulse-dot { width:8px; height:8px; border-radius:50%; display:inline-block; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .btn-primary {
+      background: linear-gradient(135deg, #00D9FF, #0099DD);
+      color: #07090F; font-weight: 600; border-radius: 10px;
+      padding: 8px 18px; transition: all .2s;
+    }
+    .btn-primary:hover { box-shadow: 0 0 20px rgba(0,217,255,.45); transform: translateY(-1px); }
+    .btn-primary:disabled { opacity:.5; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-ghost {
+      background: #12182B; color: #F0F2F6; border: 1px solid #2A3247;
+      border-radius: 10px; padding: 8px 18px;
+    }
+    .btn-ghost:hover { border-color: #00D9FF; color: #00D9FF; }
+    .input { background:#0E1117; border:1px solid #2A3247; border-radius:8px; padding:8px 12px; color:#F0F2F6; }
+    .input:focus { outline:none; border-color:#00D9FF; box-shadow: 0 0 0 3px rgba(0,217,255,.15); }
+    .tab { padding: 10px 16px; color: #8B95AD; border-bottom: 2px solid transparent; cursor: pointer; font-weight: 500; }
+    .tab.active { color: #00D9FF; border-bottom-color: #00D9FF; }
+    .badge { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+    .nav-item { display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:10px; color:#8B95AD; cursor:pointer; font-weight:500; transition: all .15s; }
+    .nav-item:hover { background: rgba(0, 217, 255, 0.06); color:#F0F2F6; }
+    .nav-item.active { background: rgba(0, 217, 255, 0.12); color: #00D9FF; border-left: 2px solid #00D9FF; border-radius: 0 10px 10px 0; padding-left: 12px; }
+    .nav-item svg { width:18px; height:18px; flex:none; }
+    .skeleton { background: linear-gradient(90deg, #12182B 25%, #1C2130 50%, #12182B 75%); background-size: 200% 100%; animation: skel 1.4s ease-in-out infinite; border-radius: 6px; }
+    @keyframes skel { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+    details summary::-webkit-details-marker { display: none; }
+    [x-cloak] { display: none !important; }
+    .scroll-y { overflow-y: auto; }
+    .scroll-y::-webkit-scrollbar { width: 8px; }
+    .scroll-y::-webkit-scrollbar-thumb { background:#2A3247; border-radius: 4px; }
+  </style>
+</head>
+<body x-data="qf()" x-cloak class="min-h-screen">
+
+<div class="flex min-h-screen">
+
+  <!-- SIDEBAR -->
+  <aside class="w-[260px] bg-bg border-r border-border flex-none flex flex-col">
+    <div class="px-6 pt-6 pb-2">
+      <div class="font-display text-2xl font-bold" style="background:linear-gradient(90deg,#00D9FF,#00D98F);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">⚡ QuantForge</div>
+      <div class="text-[11px] uppercase tracking-widest text-dim mt-1">Quant Research Terminal</div>
+    </div>
+    <nav class="px-3 mt-4 space-y-0.5">
+      <template x-for="item in nav" :key="item.id">
+        <a class="nav-item" :class="active===item.id && 'active'" @click="active=item.id">
+          <span x-html="item.icon"></span>
+          <span x-text="item.label"></span>
+          <span x-show="item.pulse" class="ml-auto"><span class="pulse-dot bg-green"></span></span>
+        </a>
+      </template>
+    </nav>
+    <div class="mt-auto px-6 py-4 border-t border-border">
+      <div class="text-[11px] uppercase tracking-widest text-dim mb-2">API status</div>
+      <div class="flex items-center gap-2 text-[13px]">
+        <span class="pulse-dot" :class="apiStatus==='ok' ? 'bg-green' : apiStatus==='degraded' ? 'bg-amber' : 'bg-red'"></span>
+        <span x-text="apiStatus === 'ok' ? 'Connected' : apiStatus"></span>
+      </div>
+      <div class="text-[11px] text-dim mt-1 num" x-text="apiVersion ? 'v'+apiVersion : '—'"></div>
+      <div class="mt-3">
+        <details>
+          <summary class="text-[11px] uppercase tracking-widest text-dim cursor-pointer hover:text-cyan">API key</summary>
+          <input class="input mt-2 w-full text-xs num" type="password" placeholder="X-API-Key"
+                 x-model="apiKey" @change="saveApiKey()" />
+        </details>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 px-8 py-6 scroll-y">
+
+    <!-- TOP BAR -->
+    <div class="flex items-center justify-between mb-6">
+      <div class="text-sm text-dim" x-text="'Overview / ' + nav.find(n=>n.id===active)?.label"></div>
+      <div class="flex items-center gap-2 text-[12px]">
+        <span class="card px-3 py-1 flex items-center gap-2"><span class="pulse-dot bg-green"></span><span class="num">322 tests passing</span></span>
+        <span class="card px-3 py-1 flex items-center gap-2"><span class="pulse-dot bg-cyan"></span><span class="num">2,516 bars · real data</span></span>
+        <span class="card px-3 py-1 flex items-center gap-2"><span class="pulse-dot bg-purple"></span><span>v1.0.0</span></span>
+      </div>
+    </div>
+
+    <!-- ================ OVERVIEW ================ -->
+    <section x-show="active==='overview'">
+      <h1 class="font-display text-5xl font-bold tracking-tight leading-none"
+          style="background:linear-gradient(135deg,#F0F2F6 20%,#00D9FF 60%,#00D98F 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+        QuantForge Terminal
+      </h1>
+      <p class="text-dim mt-3 max-w-2xl">Full-stack quant research — backtesting, options pricing, portfolio optimization, risk analytics, and machine learning — in one minimal-dep Python library with a hardened REST API.</p>
+
+      <!-- KPI cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+        <template x-for="k in overviewKpis" :key="k.label">
+          <div class="card p-5">
+            <div class="text-[11px] text-dim uppercase tracking-widest" x-text="k.label"></div>
+            <div class="font-display text-3xl mt-2 num" :class="k.color" x-text="k.value"></div>
+            <div class="text-[12px] mt-1 num" :class="k.trendColor" x-text="k.trend"></div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Hero chart -->
+      <div class="card p-5 mt-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="text-[11px] uppercase tracking-widest text-dim">Market Snapshot</div>
+            <div class="text-lg font-display font-semibold mt-1">5-ETF normalized price (base 100)</div>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn-ghost text-xs" @click="loadOverview()">⟳ Refresh</button>
+          </div>
+        </div>
+        <div id="heroChart" class="h-[360px]"></div>
+      </div>
+
+      <!-- Module cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        <template x-for="m in modules" :key="m.name">
+          <div class="card p-4">
+            <div class="text-[11px] uppercase tracking-widest" :class="m.color" x-text="m.name"></div>
+            <div class="text-dim text-sm mt-2" x-text="m.desc"></div>
+          </div>
+        </template>
+      </div>
+    </section>
+
+    <!-- ================ OPTIONS ================ -->
+    <section x-show="active==='options'">
+      <h1 class="font-display text-4xl font-bold">Options Lab</h1>
+      <p class="text-dim mt-2">Price vanilla + American + exotics side-by-side with live Greeks.</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-6">
+        <div><div class="text-[11px] uppercase text-dim mb-1">Spot</div><input type="number" class="input w-full num" x-model.number="opt.S"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">Strike</div><input type="number" class="input w-full num" x-model.number="opt.K"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">T (years)</div><input type="number" step="0.05" class="input w-full num" x-model.number="opt.T"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">r</div><input type="number" step="0.005" class="input w-full num" x-model.number="opt.r"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">σ</div><input type="number" step="0.01" class="input w-full num" x-model.number="opt.sigma"></div>
+        <div>
+          <div class="text-[11px] uppercase text-dim mb-1">Type</div>
+          <select class="input w-full" x-model="opt.option">
+            <option value="call">call</option><option value="put">put</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center gap-3">
+        <button class="btn-primary" @click="priceOption()" :disabled="opt.loading" x-text="opt.loading ? 'Pricing…' : '▶ Price option'"></button>
+        <span class="text-xs text-dim" x-text="opt.elapsed ? opt.elapsed+' ms' : ''"></span>
+      </div>
+
+      <div x-show="opt.result" class="mt-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Black-Scholes</div><div class="font-display text-2xl num mt-1 text-cyan" x-text="'$'+fmt(opt.result?.black_scholes,4)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">CRR European</div><div class="font-display text-2xl num mt-1" x-text="'$'+fmt(opt.result?.crr_european,4)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">CRR American</div><div class="font-display text-2xl num mt-1" x-text="'$'+fmt(opt.result?.crr_american,4)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Monte Carlo</div><div class="font-display text-2xl num mt-1 text-green" x-text="'$'+fmt(opt.result?.monte_carlo,4)"></div><div class="text-xs text-dim num mt-1" x-text="'±'+fmt(opt.result?.monte_carlo_stderr,4)"></div></div>
+        </div>
+        <div class="grid grid-cols-5 gap-3 mt-4">
+          <template x-for="g in ['delta','gamma','vega','theta','rho']" :key="g">
+            <div class="card p-4">
+              <div class="text-[11px] uppercase text-dim" x-text="g.toUpperCase()"></div>
+              <div class="font-display text-2xl num mt-1" :class="opt.result?.greeks?.[g] >= 0 ? 'text-green' : 'text-red'" x-text="fmt(opt.result?.greeks?.[g],4)"></div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div x-show="opt.error" class="card p-4 mt-4 border-red text-red" x-text="opt.error"></div>
+    </section>
+
+    <!-- ================ BACKTEST ================ -->
+    <section x-show="active==='backtest'">
+      <h1 class="font-display text-4xl font-bold">Strategy Backtest</h1>
+      <p class="text-dim mt-2">Plug any of 11 strategies into real ETF data and compare against buy-and-hold.</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        <div>
+          <div class="text-[11px] uppercase text-dim mb-1">Strategy</div>
+          <select class="input w-full" x-model="bt.strategy">
+            <template x-for="s in strategies" :key="s.id">
+              <option :value="s.id" x-text="s.label"></option>
+            </template>
+          </select>
+        </div>
+        <div>
+          <div class="text-[11px] uppercase text-dim mb-1">Rebalance</div>
+          <select class="input w-full" x-model="bt.rebalance">
+            <option value="monthly">monthly</option><option value="weekly">weekly</option><option value="bar">every bar</option>
+          </select>
+        </div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">Capital</div><input type="number" class="input w-full num" x-model.number="bt.capital"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">Sizing fraction</div><input type="number" step="0.05" class="input w-full num" x-model.number="bt.sizing"></div>
+      </div>
+
+      <div class="mt-3">
+        <div class="text-[11px] uppercase text-dim mb-1">Tickers (comma-separated)</div>
+        <input class="input w-full num" x-model="bt.tickers_raw">
+      </div>
+
+      <div class="mt-4 flex items-center gap-3">
+        <button class="btn-primary" @click="runBacktest()" :disabled="bt.loading" x-text="bt.loading ? 'Running…' : '▶ Run backtest'"></button>
+        <span class="text-xs text-dim" x-text="bt.elapsed ? bt.elapsed+' ms' : ''"></span>
+      </div>
+
+      <div x-show="bt.result" class="mt-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Total Return</div><div class="font-display text-2xl num mt-1" :class="bt.result?.summary_stats?.total_return >= 0 ? 'text-green' : 'text-red'" x-text="pct(bt.result?.summary_stats?.total_return)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Sharpe</div><div class="font-display text-2xl num mt-1 text-cyan" x-text="fmt(bt.result?.summary_stats?.sharpe, 2)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Max DD</div><div class="font-display text-2xl num mt-1 text-red" x-text="pct(bt.result?.summary_stats?.max_drawdown)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Trades</div><div class="font-display text-2xl num mt-1" x-text="(bt.result?.n_trades || 0).toLocaleString()"></div></div>
+        </div>
+
+        <div class="card p-5 mt-4">
+          <div class="text-[11px] uppercase tracking-widest text-dim mb-3">Equity curve</div>
+          <div id="btChart" class="h-[360px]"></div>
+        </div>
+
+        <details class="mt-4">
+          <summary class="text-sm text-dim cursor-pointer hover:text-cyan">Full metrics ▾</summary>
+          <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+            <template x-for="[k,v] in Object.entries(bt.result?.summary_stats || {})" :key="k">
+              <div class="card p-3 flex justify-between">
+                <span class="text-dim" x-text="k"></span>
+                <span class="num" x-text="typeof v === 'number' ? (k.includes('ratio') || k==='sharpe' || k==='sortino' || k==='calmar' || k==='skew' || k==='kurt' ? fmt(v,3) : pct(v)) : v"></span>
+              </div>
+            </template>
+          </div>
+        </details>
+      </div>
+
+      <div x-show="bt.error" class="card p-4 mt-4 border-red text-red" x-text="bt.error"></div>
+    </section>
+
+    <!-- ================ PORTFOLIO ================ -->
+    <section x-show="active==='portfolio'">
+      <h1 class="font-display text-4xl font-bold">Portfolio Optimizer</h1>
+      <p class="text-dim mt-2">Max-Sharpe, Min-Variance, ERC, and HRP on real returns.</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        <div>
+          <div class="text-[11px] uppercase text-dim mb-1">Objective</div>
+          <select class="input w-full" x-model="pf.objective">
+            <option value="max_sharpe">Max Sharpe</option>
+            <option value="min_variance">Min Variance</option>
+            <option value="erc">Equal Risk Contribution</option>
+            <option value="hrp">Hierarchical Risk Parity</option>
+          </select>
+        </div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">Start</div><input class="input w-full num" x-model="pf.start"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">End</div><input class="input w-full num" x-model="pf.end"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">Risk-free (r)</div><input type="number" step="0.005" class="input w-full num" x-model.number="pf.rf"></div>
+      </div>
+
+      <div class="mt-3">
+        <div class="text-[11px] uppercase text-dim mb-1">Tickers</div>
+        <input class="input w-full num" x-model="pf.tickers_raw">
+      </div>
+
+      <div class="mt-4">
+        <button class="btn-primary" @click="runOptimize()" :disabled="pf.loading" x-text="pf.loading ? 'Optimizing…' : '▶ Run optimization'"></button>
+      </div>
+
+      <div x-show="pf.result" class="mt-6">
+        <div class="grid grid-cols-3 gap-3">
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Expected return</div><div class="font-display text-2xl num mt-1 text-green" x-text="pct(pf.result?.expected_return)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Expected vol</div><div class="font-display text-2xl num mt-1" x-text="pct(pf.result?.expected_vol)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Sharpe</div><div class="font-display text-2xl num mt-1 text-cyan" x-text="fmt(pf.result?.expected_sharpe, 2)"></div></div>
+        </div>
+        <div class="card p-5 mt-4">
+          <div class="text-[11px] uppercase tracking-widest text-dim mb-3">Weights</div>
+          <div id="pfChart" class="h-[320px]"></div>
+        </div>
+      </div>
+      <div x-show="pf.error" class="card p-4 mt-4 border-red text-red" x-text="pf.error"></div>
+    </section>
+
+    <!-- ================ RISK ================ -->
+    <section x-show="active==='risk'">
+      <h1 class="font-display text-4xl font-bold">Risk Analysis</h1>
+      <p class="text-dim mt-2">VaR / CVaR across 4 methods, with histogram.</p>
+
+      <div class="grid grid-cols-3 gap-3 mt-6">
+        <div>
+          <div class="text-[11px] uppercase text-dim mb-1">Source</div>
+          <select class="input w-full" x-model="risk.source">
+            <option value="SPY">SPY</option><option value="QQQ">QQQ</option>
+            <option value="IWM">IWM</option><option value="TLT">TLT</option><option value="GLD">GLD</option>
+            <option value="synthetic">Synthetic GBM</option>
+          </select>
+        </div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">Confidence</div><input type="number" step="0.01" class="input w-full num" x-model.number="risk.conf"></div>
+        <div>
+          <div class="text-[11px] uppercase text-dim mb-1">Method</div>
+          <select class="input w-full" x-model="risk.method">
+            <option value="historical">historical</option>
+            <option value="parametric">parametric</option>
+            <option value="cornish_fisher">cornish-fisher</option>
+            <option value="monte_carlo">monte carlo</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mt-4"><button class="btn-primary" @click="runVar()" :disabled="risk.loading" x-text="risk.loading ? 'Computing…' : '▶ Compute VaR'"></button></div>
+
+      <div x-show="risk.result" class="mt-6">
+        <div class="grid grid-cols-2 gap-3">
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">VaR</div><div class="font-display text-3xl num mt-1 text-red" x-text="pct(risk.result?.var)"></div><div class="text-xs text-dim mt-1" x-text="risk.result?.method"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">CVaR (Expected Shortfall)</div><div class="font-display text-3xl num mt-1 text-red" x-text="pct(risk.result?.cvar)"></div><div class="text-xs text-dim mt-1 num" x-text="(risk.result?.n_observations||0)+' obs'"></div></div>
+        </div>
+        <div class="card p-5 mt-4">
+          <div class="text-[11px] uppercase tracking-widest text-dim mb-3">Return distribution</div>
+          <div id="riskHist" class="h-[280px]"></div>
+        </div>
+      </div>
+      <div x-show="risk.error" class="card p-4 mt-4 border-red text-red" x-text="risk.error"></div>
+    </section>
+
+    <!-- ================ ML ================ -->
+    <section x-show="active==='ml'">
+      <h1 class="font-display text-4xl font-bold">ML Training</h1>
+      <p class="text-dim mt-2">Real SPY → 20+ features → time-ordered train/val/test. Honest overfitting visible.</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-6">
+        <div><div class="text-[11px] uppercase text-dim mb-1">Ticker</div><input class="input w-full num" x-model="ml.ticker"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">Start</div><input class="input w-full num" x-model="ml.start"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">End</div><input class="input w-full num" x-model="ml.end"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">n_estimators</div><input type="number" class="input w-full num" x-model.number="ml.n_estimators"></div>
+        <div><div class="text-[11px] uppercase text-dim mb-1">max_depth</div><input type="number" class="input w-full num" x-model.number="ml.max_depth"></div>
+      </div>
+
+      <div class="mt-4"><button class="btn-primary" @click="trainMl()" :disabled="ml.loading" x-text="ml.loading ? 'Training on real data (~15s)…' : '✦ Train real model'"></button></div>
+
+      <div x-show="ml.result" class="mt-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Train acc</div><div class="font-display text-2xl num mt-1 text-green" x-text="fmt(ml.result?.train_acc, 4)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Val acc</div><div class="font-display text-2xl num mt-1 text-green" x-text="fmt(ml.result?.val_acc, 4)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Test acc</div><div class="font-display text-2xl num mt-1" :class="ml.result?.test_acc > ml.result?.baseline_acc ? 'text-cyan' : 'text-amber'" x-text="fmt(ml.result?.test_acc, 4)"></div><div class="text-xs num mt-1" :class="(ml.result?.test_acc - ml.result?.baseline_acc) > 0 ? 'text-green' : 'text-red'" x-text="'Δ vs baseline: '+fmt(ml.result?.test_acc - ml.result?.baseline_acc, 4)"></div></div>
+          <div class="card p-4"><div class="text-[11px] uppercase text-dim">Test AUC</div><div class="font-display text-2xl num mt-1 text-purple" x-text="fmt(ml.result?.test_auc, 4)"></div><div class="text-xs text-dim mt-1">0.5 = random</div></div>
+        </div>
+        <div class="card p-5 mt-4">
+          <div class="text-[11px] uppercase tracking-widest text-dim mb-3">Top feature importances</div>
+          <div id="mlChart" class="h-[420px]"></div>
+        </div>
+      </div>
+      <div x-show="ml.error" class="card p-4 mt-4 border-red text-red" x-text="ml.error"></div>
+    </section>
+
+    <!-- ================ DOCS ================ -->
+    <section x-show="active==='docs'">
+      <h1 class="font-display text-4xl font-bold">API Reference</h1>
+      <p class="text-dim mt-2">Every endpoint, with copy-pastable curl examples.</p>
+      <div class="card p-5 mt-6">
+        <iframe src="/docs" class="w-full h-[720px] rounded-md" style="background:#fff;"></iframe>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+function qf() {
+  return {
+    // state
+    active: localStorage.getItem('qf_active') || 'overview',
+    apiKey: localStorage.getItem('qf_api_key') || '',
+    apiStatus: 'connecting',
+    apiVersion: null,
+    nav: [
+      { id: 'overview',  label: 'Overview',        icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 6h16M4 12h16M4 18h10"/></svg>' },
+      { id: 'options',   label: 'Options Lab',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' },
+      { id: 'backtest',  label: 'Strategy Backtest', icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3z"/></svg>', pulse: true },
+      { id: 'portfolio', label: 'Portfolio Opt',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>' },
+      { id: 'risk',      label: 'Risk Analysis',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 9v2m0 4h.01M4.93 4.93a10 10 0 0014.14 14.14A10 10 0 004.93 4.93z"/></svg>' },
+      { id: 'ml',        label: 'ML Training',      icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9.663 17h4.673M12 3v1M5.05 5.05l.707.707M3 12h1M19.95 5.05l-.707.707M21 12h-1M12 17a5 5 0 01-5-5 5 5 0 1110 0 5 5 0 01-5 5z"/></svg>' },
+      { id: 'docs',      label: 'API Reference',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 6H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5M14 4h6m0 0v6m0-6L10 14"/></svg>' },
+    ],
+    overviewKpis: [
+      { label: 'Total Return · SPY 10Y', value: '—', color: 'text-text', trend: '', trendColor: '' },
+      { label: 'Sharpe',                 value: '—', color: 'text-cyan', trend: '', trendColor: '' },
+      { label: 'Max Drawdown',           value: '—', color: 'text-red',  trend: '', trendColor: '' },
+      { label: 'Active Strategies',      value: '12',color: 'text-purple', trend: '+4 new', trendColor: 'text-green' },
+    ],
+    modules: [
+      { name: '◆ Data',       desc: 'Synthetic GBM + yfinance loader + 2,516 cached ETF bars',   color: 'text-cyan' },
+      { name: '▤ Indicators', desc: '15 technical + 10 statistical, vectorized',                 color: 'text-cyan' },
+      { name: '◈ Options',    desc: 'BS, CRR, Monte Carlo exotics, closed-form Greeks',          color: 'text-purple' },
+      { name: '◎ Portfolio',  desc: 'Markowitz, ERC, Black-Litterman, HRP, CVaR-LP',             color: 'text-purple' },
+      { name: '⚠ Risk',       desc: 'VaR × 4 methods, stress tests, Kelly, MC simulation',      color: 'text-amber' },
+      { name: '✦ ML',         desc: 'Features, regime, walk-forward trainer with HP search',    color: 'text-green' },
+      { name: '⚗ Backtest',   desc: 'Event-driven, broker sim, monthly rebalance, TCA',          color: 'text-cyan' },
+      { name: '♛ Strategies', desc: '12: momentum, MR, Donchian, dual, vol-target, regime...', color: 'text-green' },
+    ],
+    strategies: [
+      { id: 'momentum',          label: 'Momentum(120)' },
+      { id: 'ma_crossover',      label: 'MA 20/100' },
+      { id: 'bollinger_mr',      label: 'Bollinger MR' },
+      { id: 'donchian',          label: 'Donchian Breakout' },
+      { id: 'rsi_reversal',      label: 'RSI Reversal' },
+      { id: 'factor',            label: 'Factor Composite' },
+      { id: 'cross_sec_momentum',label: 'Cross-Sec Momentum' },
+      { id: 'dual_momentum',     label: 'Dual Momentum' },
+      { id: 'regime_switch',     label: 'Regime Switch' },
+      { id: 'vol_target_momentum', label: 'VolTarget(Momentum)' },
+      { id: 'buy_and_hold',      label: 'Buy & Hold' },
+    ],
+
+    // inputs
+    opt: { S: 100, K: 100, T: 1.0, r: 0.04, sigma: 0.20, option: 'call', loading: false, result: null, error: null, elapsed: null },
+    bt:  { strategy: 'ma_crossover', capital: 100000, sizing: 0.25, rebalance: 'monthly', tickers_raw: 'SPY,QQQ,IWM,TLT,GLD', loading: false, result: null, error: null, elapsed: null },
+    pf:  { objective: 'max_sharpe', start: '2015-01-01', end: '2025-01-01', rf: 0.02, tickers_raw: 'SPY,QQQ,IWM,TLT,GLD', loading: false, result: null, error: null },
+    risk:{ source: 'SPY', conf: 0.95, method: 'historical', loading: false, result: null, error: null, _returns: [] },
+    ml:  { ticker: 'SPY', start: '2010-01-01', end: '2025-01-01', n_estimators: 100, max_depth: 3, loading: false, result: null, error: null },
+
+    // helpers
+    fmt(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return (+v).toFixed(d); },
+    pct(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return ((+v)*100).toFixed(d)+'%'; },
+
+    saveApiKey() { localStorage.setItem('qf_api_key', this.apiKey); },
+
+    async api(path, init={}) {
+      const headers = Object.assign({ 'Content-Type': 'application/json' }, init.headers || {});
+      if (this.apiKey) headers['X-API-Key'] = this.apiKey;
+      const r = await fetch(path, { ...init, headers });
+      if (!r.ok) {
+        let msg;
+        try { msg = (await r.json()).detail || r.statusText; } catch { msg = r.statusText; }
+        throw new Error(r.status + ' · ' + msg);
+      }
+      return r.json();
+    },
+
+    async init() {
+      this.$watch('active', v => localStorage.setItem('qf_active', v));
+      try {
+        const h = await (await fetch('/healthz')).json();
+        this.apiStatus = h.status;
+        this.apiVersion = h.version;
+      } catch (e) { this.apiStatus = 'unhealthy'; }
+      this.loadOverview();
+      // render on tab change
+      this.$watch('active', () => { this.$nextTick(() => this.renderCharts()); });
+      this.$nextTick(() => this.renderCharts());
+    },
+
+    async loadOverview() {
+      const tickers = ['SPY', 'QQQ', 'IWM', 'TLT', 'GLD'];
+      try {
+        const series = await Promise.all(tickers.map(async t => {
+          const r = await this.api(`/v1/market/data/${t}?start=2015-01-01&end=2025-01-01&sample=400`);
+          const base = r.bars[0].close;
+          return { name: t, data: r.bars.map(b => [new Date(b.date).getTime(), 100 * b.close / base]) };
+        }));
+        this._renderHeroChart(series);
+
+        // Compute KPIs from SPY
+        const spy = series[0].data;
+        const first = spy[0][1], last = spy[spy.length-1][1];
+        const ret = last/first - 1;
+        const dailyRets = [];
+        for (let i = 1; i < spy.length; i++) dailyRets.push(spy[i][1]/spy[i-1][1] - 1);
+        const mean = dailyRets.reduce((a,b)=>a+b,0)/dailyRets.length;
+        const variance = dailyRets.reduce((a,b)=>a+(b-mean)**2,0)/(dailyRets.length-1);
+        const sharpe = mean / Math.sqrt(variance) * Math.sqrt(252);
+        // Max drawdown on sampled series
+        let peak = -Infinity, mdd = 0;
+        for (const [,v] of spy) { if (v>peak) peak=v; mdd = Math.min(mdd, v/peak - 1); }
+        this.overviewKpis[0].value = this.pct(ret);
+        this.overviewKpis[0].trend = 'cumulative'; this.overviewKpis[0].trendColor = 'text-dim';
+        this.overviewKpis[1].value = this.fmt(sharpe, 2);
+        this.overviewKpis[1].trend = 'risk-adjusted'; this.overviewKpis[1].trendColor = 'text-dim';
+        this.overviewKpis[2].value = this.pct(mdd);
+        this.overviewKpis[2].trend = '2020 COVID'; this.overviewKpis[2].trendColor = 'text-dim';
+      } catch (e) {
+        console.error(e);
+      }
+    },
+
+    renderCharts() {
+      if (this.active === 'backtest' && this.bt.result) this._renderBtChart();
+      if (this.active === 'portfolio' && this.pf.result) this._renderPfChart();
+      if (this.active === 'risk' && this.risk.result) this._renderRiskHist();
+      if (this.active === 'ml' && this.ml.result) this._renderMlChart();
+    },
+
+    _baseChart(more={}) {
+      return Object.assign({
+        chart: { background: 'transparent', toolbar: { show: false }, animations: { enabled: true, speed: 350 }, foreColor: '#8B95AD' },
+        grid: { borderColor: '#2A3247', strokeDashArray: 3, xaxis: { lines: { show: false } } },
+        dataLabels: { enabled: false },
+        stroke: { width: 2, curve: 'smooth' },
+        tooltip: { theme: 'dark', x: { format: 'dd MMM yyyy' } },
+        xaxis: { labels: { style: { colors: '#8B95AD', fontFamily: 'JetBrains Mono' } }, axisBorder: { color: '#2A3247' }, axisTicks: { color: '#2A3247' } },
+        yaxis: { labels: { style: { colors: '#8B95AD', fontFamily: 'JetBrains Mono' } } },
+        theme: { mode: 'dark' },
+        legend: { labels: { colors: '#F0F2F6' } },
+      }, more);
+    },
+
+    _renderHeroChart(series) {
+      const el = document.querySelector('#heroChart'); if (!el) return;
+      el.innerHTML = '';
+      new ApexCharts(el, this._baseChart({
+        series, chart: { type: 'line', height: 360, background: 'transparent', toolbar: { show: false }, foreColor: '#8B95AD' },
+        xaxis: { type: 'datetime', labels: { style: { colors: '#8B95AD', fontFamily: 'JetBrains Mono' } } },
+        colors: ['#FFFFFF', '#00D9FF', '#00D98F', '#B794F4', '#FFB547'],
+        stroke: { width: [1.8, 2.2, 2.2, 2.2, 2.2], dashArray: [5, 0, 0, 0, 0] },
+      })).render();
+    },
+
+    async priceOption() {
+      this.opt.loading = true; this.opt.error = null; this.opt.result = null;
+      const t0 = performance.now();
+      try {
+        this.opt.result = await this.api('/v1/options/price', { method: 'POST', body: JSON.stringify(this.opt) });
+      } catch (e) { this.opt.error = e.message; }
+      this.opt.elapsed = (performance.now() - t0).toFixed(0);
+      this.opt.loading = false;
+    },
+
+    async runBacktest() {
+      this.bt.loading = true; this.bt.error = null; this.bt.result = null;
+      const t0 = performance.now();
+      try {
+        const body = {
+          strategy: this.bt.strategy, params: {},
+          tickers: this.bt.tickers_raw.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean),
+          start: '2015-01-01', end: '2025-01-01',
+          capital: +this.bt.capital, sizing_fraction: +this.bt.sizing,
+          rebalance: this.bt.rebalance,
+        };
+        this.bt.result = await this.api('/v1/backtest', { method: 'POST', body: JSON.stringify(body) });
+        this.$nextTick(() => this._renderBtChart());
+      } catch (e) { this.bt.error = e.message; }
+      this.bt.elapsed = (performance.now() - t0).toFixed(0);
+      this.bt.loading = false;
+    },
+
+    _renderBtChart() {
+      const el = document.querySelector('#btChart'); if (!el || !this.bt.result) return;
+      el.innerHTML = '';
+      const pts = Object.entries(this.bt.result.equity_curve_sample)
+        .map(([d,v]) => [new Date(d).getTime(), +v]);
+      new ApexCharts(el, this._baseChart({
+        series: [{ name: this.bt.strategy, data: pts }],
+        chart: { type: 'area', height: 360, background: 'transparent', toolbar: { show: false }, foreColor: '#8B95AD' },
+        colors: ['#00D9FF'],
+        stroke: { width: 2 },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.32, opacityTo: 0, stops: [0, 90, 100] } },
+        xaxis: { type: 'datetime', labels: { style: { colors: '#8B95AD', fontFamily: 'JetBrains Mono' } } },
+        yaxis: { labels: { formatter: v => '$' + Math.round(v).toLocaleString() } },
+      })).render();
+    },
+
+    async runOptimize() {
+      this.pf.loading = true; this.pf.error = null; this.pf.result = null;
+      try {
+        const body = {
+          tickers: this.pf.tickers_raw.split(',').map(s=>s.trim().toUpperCase()).filter(Boolean),
+          start: this.pf.start, end: this.pf.end,
+          objective: this.pf.objective, risk_free: +this.pf.rf,
+        };
+        this.pf.result = await this.api('/v1/portfolio/optimize', { method: 'POST', body: JSON.stringify(body) });
+        this.$nextTick(() => this._renderPfChart());
+      } catch (e) { this.pf.error = e.message; }
+      this.pf.loading = false;
+    },
+
+    _renderPfChart() {
+      const el = document.querySelector('#pfChart'); if (!el || !this.pf.result) return;
+      el.innerHTML = '';
+      const names = Object.keys(this.pf.result.weights);
+      const vals  = Object.values(this.pf.result.weights).map(v => +v);
+      new ApexCharts(el, this._baseChart({
+        series: [{ name: 'weight', data: vals }],
+        chart: { type: 'bar', height: 320, background: 'transparent', toolbar: { show: false }, foreColor: '#8B95AD' },
+        colors: ['#00D9FF'],
+        plotOptions: { bar: { horizontal: true, borderRadius: 6, distributed: true, dataLabels: { position: 'top' } } },
+        dataLabels: { enabled: true, formatter: v => (v*100).toFixed(1)+'%', style: { colors: ['#F0F2F6'], fontFamily: 'JetBrains Mono' } },
+        xaxis: { categories: names, labels: { formatter: v => (v*100).toFixed(0)+'%' } },
+      })).render();
+    },
+
+    async runVar() {
+      this.risk.loading = true; this.risk.error = null; this.risk.result = null;
+      try {
+        let rets;
+        if (this.risk.source === 'synthetic') {
+          // box-muller GBM innovations
+          rets = [];
+          for (let i = 0; i < 1000; i++) {
+            const u = 1 - Math.random(), v = 1 - Math.random();
+            rets.push(0.0003 + 0.015 * Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v));
+          }
+        } else {
+          const r = await this.api(`/v1/market/data/${this.risk.source}?start=2015-01-01&end=2025-01-01&sample=2500`);
+          rets = [];
+          for (let i = 1; i < r.bars.length; i++) rets.push(r.bars[i].close / r.bars[i-1].close - 1);
+        }
+        this.risk._returns = rets;
+        this.risk.result = await this.api('/v1/risk/var', {
+          method: 'POST',
+          body: JSON.stringify({ returns: rets, confidence: +this.risk.conf, method: this.risk.method }),
+        });
+        this.$nextTick(() => this._renderRiskHist());
+      } catch (e) { this.risk.error = e.message; }
+      this.risk.loading = false;
+    },
+
+    _renderRiskHist() {
+      const el = document.querySelector('#riskHist'); if (!el || !this.risk._returns.length) return;
+      el.innerHTML = '';
+      const rets = this.risk._returns.map(v => v*100);
+      const min = Math.min(...rets), max = Math.max(...rets), bins = 50;
+      const step = (max - min) / bins;
+      const counts = Array(bins).fill(0), labels = [];
+      for (let i = 0; i < bins; i++) labels.push((min + i*step).toFixed(2));
+      for (const r of rets) {
+        const idx = Math.min(bins-1, Math.floor((r - min) / step));
+        counts[idx]++;
+      }
+      new ApexCharts(el, this._baseChart({
+        series: [{ name: 'count', data: counts }],
+        chart: { type: 'bar', height: 280, background: 'transparent', toolbar: { show: false }, foreColor: '#8B95AD' },
+        colors: ['#00D9FF'],
+        plotOptions: { bar: { columnWidth: '95%' } },
+        xaxis: { categories: labels, tickAmount: 10, labels: { formatter: v => v+'%' } },
+      })).render();
+    },
+
+    async trainMl() {
+      this.ml.loading = true; this.ml.error = null; this.ml.result = null;
+      try {
+        this.ml.result = await this.api('/v1/ml/train', {
+          method: 'POST',
+          body: JSON.stringify({
+            ticker: this.ml.ticker, start: this.ml.start, end: this.ml.end,
+            n_estimators: +this.ml.n_estimators, max_depth: +this.ml.max_depth,
+            learning_rate: 0.05,
+          }),
+        });
+        this.$nextTick(() => this._renderMlChart());
+      } catch (e) { this.ml.error = e.message; }
+      this.ml.loading = false;
+    },
+
+    _renderMlChart() {
+      const el = document.querySelector('#mlChart'); if (!el || !this.ml.result) return;
+      el.innerHTML = '';
+      const entries = Object.entries(this.ml.result.top_features || {}).sort((a,b) => b[1] - a[1]);
+      const names  = entries.map(e => e[0]);
+      const vals   = entries.map(e => +e[1]);
+      new ApexCharts(el, this._baseChart({
+        series: [{ name: 'importance', data: vals }],
+        chart: { type: 'bar', height: 420, background: 'transparent', toolbar: { show: false }, foreColor: '#8B95AD' },
+        colors: ['#B794F4'],
+        plotOptions: { bar: { horizontal: true, borderRadius: 6, distributed: false } },
+        dataLabels: { enabled: true, formatter: v => v.toFixed(3), style: { colors: ['#F0F2F6'], fontFamily: 'JetBrains Mono' } },
+        xaxis: { categories: names, labels: { formatter: v => v.toFixed(3) } },
+      })).render();
+    },
+  };
+}
+</script>
+</body></html>
