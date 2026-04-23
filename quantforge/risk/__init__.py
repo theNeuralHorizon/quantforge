@@ -20,6 +20,10 @@ from quantforge.risk.kelly import (
     kelly_fraction, kelly_continuous, kelly_vector, fractional_kelly,
     kelly_vector_capped,
 )
+from quantforge.risk.attribution import (
+    volatility_attribution, var_attribution, cvar_attribution,
+    risk_budget_deviation, RiskAttributionReport,
+)
 
 __all__ = [
     "historical_var", "historical_cvar", "parametric_var", "parametric_cvar",
@@ -31,4 +35,6 @@ __all__ = [
     "simulate_portfolio", "simulate_portfolio_returns", "SimulationResult",
     "kelly_fraction", "kelly_continuous", "kelly_vector", "fractional_kelly",
     "kelly_vector_capped",
+    "volatility_attribution", "var_attribution", "cvar_attribution",
+    "risk_budget_deviation", "RiskAttributionReport",
 ]
