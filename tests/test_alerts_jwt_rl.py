@@ -53,12 +53,17 @@ class TestJWT:
         jwt_auth.reload_config()
 
     def test_jwt_disabled_when_no_secret(self):
-        for k in ("QUANTFORGE_JWT_SECRET",):
-            os.environ.pop(k, None)
+        saved = os.environ.pop("QUANTFORGE_JWT_SECRET", None)
         from quantforge.api import jwt_auth
         jwt_auth.reload_config()
-        with pytest.raises(RuntimeError):
-            jwt_auth.issue_token("u")
+        try:
+            with pytest.raises(RuntimeError):
+                jwt_auth.issue_token("u")
+        finally:
+            # Restore so subsequent tests can issue tokens
+            if saved is not None:
+                os.environ["QUANTFORGE_JWT_SECRET"] = saved
+            jwt_auth.reload_config()
 
 
 # ---------- Alerts -----------------------------------------------------------

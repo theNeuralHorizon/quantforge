@@ -10,14 +10,21 @@ from quantforge.config import Settings, reload_settings
 
 class TestSettings:
     def test_defaults(self):
-        for k in ("QUANTFORGE_API_KEYS", "QUANTFORGE_JWT_SECRET", "REDIS_URL"):
-            os.environ.pop(k, None)
-        s = Settings()
-        assert s.log_level == "INFO"
-        assert s.api_port == 8000
-        assert s.rate_limit_per_minute == 120
-        assert s.api_keys_list == []
-        assert s.cors_origins_list == []
+        # Save state so we don't pollute other test modules
+        saved = {k: os.environ.pop(k, None) for k in
+                 ("QUANTFORGE_API_KEYS", "QUANTFORGE_JWT_SECRET", "REDIS_URL")}
+        try:
+            s = Settings()
+            assert s.log_level == "INFO"
+            assert s.api_port == 8000
+            assert s.rate_limit_per_minute == 120
+            assert s.api_keys_list == []
+            assert s.cors_origins_list == []
+        finally:
+            for k, v in saved.items():
+                if v is not None:
+                    os.environ[k] = v
+            reload_settings()
 
     def test_env_override(self):
         os.environ["QUANTFORGE_LOG_LEVEL"] = "DEBUG"

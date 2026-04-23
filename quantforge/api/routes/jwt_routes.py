@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from quantforge.api.auth import verify_api_key
-from quantforge.api.jwt_auth import issue_token, _config
+from quantforge.api import jwt_auth as _jwt_auth
+from quantforge.api.jwt_auth import issue_token
 
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
@@ -31,7 +32,8 @@ class TokenResponse(BaseModel):
 
 @router.post("/token", response_model=TokenResponse)
 def issue(req: TokenRequest, _owner: str = Depends(verify_api_key)) -> TokenResponse:
-    if not _config.enabled:
+    # Read the live module-level config so reload_config() is honoured.
+    if not _jwt_auth._config.enabled:
         raise HTTPException(status_code=503, detail="JWT not configured on this server")
     # Whitelist scopes
     allowed = {"backtest:read", "backtest:write", "options:read",
