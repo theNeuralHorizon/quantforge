@@ -1,0 +1,47 @@
+# Optional add-on: docker-compose -f docker-compose.yml -f docker-compose.observability.yml up
+# Stands up Prometheus + Grafana + Jaeger next to the API so metrics and
+# traces go somewhere useful out of the box.
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus-alerts.yaml:/etc/prometheus/rules/quantforge.yaml:ro
+      - prom-data:/prometheus
+    ports: ["9090:9090"]
+    networks: [qfnet]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana-provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana-dashboard.json:/var/lib/grafana/dashboards/quantforge.json:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+    networks: [qfnet]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"   # UI
+      - "4318:4318"     # OTLP HTTP receiver (point OTEL_EXPORTER_OTLP_ENDPOINT here)
+    networks: [qfnet]
+
+volumes:
+  prom-data:
+  grafana-data:
