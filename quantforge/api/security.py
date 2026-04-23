@@ -22,10 +22,8 @@ _BASE_CSP = (
     "base-uri 'self'"
 )
 
-# Relaxed CSP for the static /ui/ dashboard + Swagger/ReDoc.
-# Alpine.js needs 'unsafe-eval' for its inline expressions; Tailwind + Alpine
-# + ApexCharts load from CDNs. WebSocket upgrades (ws:/wss:) to same origin
-# are needed for /ws/events.
+# Relaxed CSP for the static /ui/ dashboard (Alpine + Tailwind + ApexCharts).
+# The UI itself MUST NOT be iframeable, so frame-ancestors stays 'none'.
 _UI_CSP = (
     "default-src 'self'; "
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
@@ -38,29 +36,55 @@ _UI_CSP = (
     "base-uri 'self'"
 )
 
-SECURE_HEADERS = {
+# CSP for Swagger UI / ReDoc. These ARE intentionally embeddable in /ui/'s
+# iframe, so frame-ancestors 'self' instead of 'none'. FastAPI's /docs
+# bootstrap pulls Swagger UI assets from jsdelivr.
+_DOCS_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; "
+    "style-src 'self' 'unsafe-inline' cdn.jsdelivr.net fonts.googleapis.com; "
+    "font-src 'self' fonts.gstatic.com data:; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'self'; "
+    "base-uri 'self'"
+)
+
+_STATIC_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-site",
 }
 
+# Kept for backward-compat (tests that assert header presence).
+SECURE_HEADERS = {**_STATIC_HEADERS, "X-Frame-Options": "DENY"}
+
 
 def _csp_for(path: str) -> str:
     """Per-route CSP: relax for interactive UI, strict for everything else."""
-    if path.startswith(("/ui", "/docs", "/redoc")):
+    if path.startswith(("/docs", "/redoc")):
+        return _DOCS_CSP
+    if path.startswith("/ui"):
         return _UI_CSP
     return _BASE_CSP
+
+
+def _xfo_for(path: str) -> str:
+    """/docs + /redoc must be iframeable from /ui/; everything else stays DENY."""
+    if path.startswith(("/docs", "/redoc")):
+        return "SAMEORIGIN"
+    return "DENY"
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         response = await call_next(request)
-        for k, v in SECURE_HEADERS.items():
+        for k, v in _STATIC_HEADERS.items():
             response.headers.setdefault(k, v)
+        response.headers.setdefault("X-Frame-Options", _xfo_for(request.url.path))
         response.headers.setdefault(
             "Content-Security-Policy", _csp_for(request.url.path)
         )
