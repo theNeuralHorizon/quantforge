@@ -411,6 +411,119 @@
       <div x-show="ml.error" class="card p-4 mt-4 border-red text-red" x-text="ml.error"></div>
     </section>
 
+    <!-- ================ JOBS ================ -->
+    <section x-show="active==='jobs'">
+      <h1 class="font-display text-4xl font-bold">Async Jobs</h1>
+      <p class="text-dim mt-2">Long-running backtests and ML training without blocking your browser.</p>
+
+      <div class="flex items-center gap-3 mt-6">
+        <button class="btn-primary" @click="submitJobBacktest()" :disabled="jobs.submitting" x-text="jobs.submitting ? 'Submitting…' : '▶ Enqueue backtest (Dual Momentum · 5 ETFs · 10y)'"></button>
+        <button class="btn-ghost" @click="refreshJobs()">⟳ Refresh list</button>
+      </div>
+
+      <div class="mt-6 space-y-2">
+        <template x-for="j in jobs.list" :key="j.id">
+          <div class="card p-4 flex items-center gap-4">
+            <div class="pulse-dot" :class="j.status==='completed' ? 'bg-green' : j.status==='failed' ? 'bg-red' : j.status==='cancelled' ? 'bg-amber' : 'bg-cyan'"></div>
+            <div class="flex-1">
+              <div class="flex items-center gap-3">
+                <span class="font-mono text-sm" x-text="j.id"></span>
+                <span class="badge" :class="j.kind==='backtest' ? 'badge-mom' : 'badge-ml'" x-text="j.kind"></span>
+                <span class="text-sm text-dim" x-text="j.status"></span>
+              </div>
+              <div class="mt-2 bg-elev rounded-full h-2 overflow-hidden">
+                <div class="bg-cyan h-full transition-all" :style="'width:'+((j.progress||0)*100)+'%'"></div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-dim num" x-text="j.created_at ? new Date(j.created_at*1000).toLocaleTimeString() : ''"></div>
+              <button class="text-xs text-red mt-1" x-show="j.status==='queued' || j.status==='running'" @click="cancelJob(j.id)">cancel</button>
+            </div>
+          </div>
+        </template>
+        <div x-show="!jobs.list.length" class="card p-8 text-center text-dim">No jobs yet. Click "Enqueue backtest" to submit one.</div>
+      </div>
+    </section>
+
+    <!-- ================ ALERTS ================ -->
+    <section x-show="active==='alerts'">
+      <h1 class="font-display text-4xl font-bold">Alerts</h1>
+      <p class="text-dim mt-2">Live feed of rule-engine events streamed via WebSocket.</p>
+
+      <div class="flex items-center gap-3 mt-6">
+        <span class="pill pill-cyan"><span class="pulse-dot"></span><span x-text="alerts.status"></span></span>
+        <button class="btn-ghost" @click="connectAlerts()">⟳ Reconnect</button>
+        <button class="btn-ghost" @click="alerts.events = []">Clear</button>
+        <button class="btn-primary" @click="demoAlert()">✦ Fire demo alert</button>
+      </div>
+
+      <div class="mt-6 space-y-2">
+        <template x-for="(evt, idx) in alerts.events" :key="idx">
+          <div class="card p-4">
+            <div class="flex items-center gap-3">
+              <span class="badge"
+                    :class="evt.data?.severity === 'critical' ? 'badge-mr'
+                       : evt.data?.severity === 'warning' ? 'badge-factor'
+                       : 'badge-mom'"
+                    x-text="evt.data?.severity || 'info'"></span>
+              <span class="font-semibold" x-text="evt.data?.title || evt.data?.event || 'event'"></span>
+              <span class="ml-auto text-xs text-dim num" x-text="new Date(evt.ts*1000).toLocaleTimeString()"></span>
+            </div>
+            <div class="text-sm text-dim mt-2" x-text="evt.data?.detail || JSON.stringify(evt.data)"></div>
+          </div>
+        </template>
+        <div x-show="!alerts.events.length" class="card p-8 text-center text-dim">
+          No events yet. Fire a demo alert or wait for a rule to trigger.
+        </div>
+      </div>
+    </section>
+
+    <!-- ================ LIVE SIGNALS ================ -->
+    <section x-show="active==='live'">
+      <h1 class="font-display text-4xl font-bold">Live Signals</h1>
+      <p class="text-dim mt-2">Strategy signal broadcasts over WebSocket /ws/events?topic=signals.</p>
+
+      <div class="flex items-center gap-3 mt-6">
+        <span class="pill pill-green"><span class="pulse-dot"></span><span x-text="live.status"></span></span>
+        <button class="btn-ghost" @click="connectLive()">⟳ Reconnect</button>
+        <button class="btn-ghost" @click="live.events = []">Clear</button>
+        <button class="btn-primary" @click="demoSignal()">✦ Fire demo signal</button>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+        <div class="card p-4"><div class="text-[11px] uppercase text-dim">Signals in last min</div><div class="font-display text-2xl num mt-1 text-cyan" x-text="live.count"></div></div>
+        <div class="card p-4"><div class="text-[11px] uppercase text-dim">Last symbol</div><div class="font-display text-2xl num mt-1 text-green" x-text="live.last?.symbol || '—'"></div></div>
+        <div class="card p-4"><div class="text-[11px] uppercase text-dim">Last direction</div><div class="font-display text-2xl num mt-1" :class="live.last?.direction > 0 ? 'text-green' : live.last?.direction < 0 ? 'text-red' : 'text-dim'" x-text="live.last ? (live.last.direction>0?'LONG':live.last.direction<0?'SHORT':'FLAT') : '—'"></div></div>
+        <div class="card p-4"><div class="text-[11px] uppercase text-dim">Strategy</div><div class="font-display text-lg mt-1 text-purple" x-text="live.last?.strategy || '—'"></div></div>
+      </div>
+
+      <div class="card p-4 mt-4 scroll-y" style="max-height:500px;">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-dim text-[11px] uppercase tracking-widest border-b border-border">
+              <th class="text-left py-2">Time</th>
+              <th class="text-left">Symbol</th>
+              <th class="text-left">Direction</th>
+              <th class="text-left">Strategy</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="(evt, idx) in live.events" :key="idx">
+              <tr class="border-b border-border hover:bg-elev">
+                <td class="py-2 text-dim num" x-text="new Date(evt.ts*1000).toLocaleTimeString()"></td>
+                <td class="num font-semibold" x-text="evt.data?.symbol"></td>
+                <td class="num" :class="evt.data?.direction > 0 ? 'text-green' : evt.data?.direction < 0 ? 'text-red' : 'text-dim'" x-text="evt.data?.direction > 0 ? '+1 LONG' : evt.data?.direction < 0 ? '-1 SHORT' : '0 FLAT'"></td>
+                <td class="text-dim" x-text="evt.data?.strategy"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+        <div x-show="!live.events.length" class="text-center text-dim p-8">
+          Waiting for signals. Press "Fire demo signal" or run a strategy via the backtest page.
+        </div>
+      </div>
+    </section>
+
     <!-- ================ DOCS ================ -->
     <section x-show="active==='docs'">
       <h1 class="font-display text-4xl font-bold">API Reference</h1>
@@ -438,6 +551,9 @@ function qf() {
       { id: 'portfolio', label: 'Portfolio Opt',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>' },
       { id: 'risk',      label: 'Risk Analysis',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 9v2m0 4h.01M4.93 4.93a10 10 0 0014.14 14.14A10 10 0 004.93 4.93z"/></svg>' },
       { id: 'ml',        label: 'ML Training',      icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M9.663 17h4.673M12 3v1M5.05 5.05l.707.707M3 12h1M19.95 5.05l-.707.707M21 12h-1M12 17a5 5 0 01-5-5 5 5 0 1110 0 5 5 0 01-5 5z"/></svg>' },
+      { id: 'jobs',      label: 'Async Jobs',       icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' },
+      { id: 'alerts',    label: 'Alerts',           icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 00-5-5.9V4a1 1 0 10-2 0v1.1A6 6 0 006 11v3.2c0 .5-.2 1-.6 1.4L4 17h5m6 0a3 3 0 11-6 0"/></svg>', pulse: true },
+      { id: 'live',      label: 'Live Signals',     icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' },
       { id: 'docs',      label: 'API Reference',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 6H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5M14 4h6m0 0v6m0-6L10 14"/></svg>' },
     ],
     overviewKpis: [
@@ -477,6 +593,13 @@ function qf() {
     risk:{ source: 'SPY', conf: 0.95, method: 'historical', loading: false, result: null, error: null, _returns: [] },
     ml:  { ticker: 'SPY', start: '2010-01-01', end: '2025-01-01', n_estimators: 100, max_depth: 3, loading: false, result: null, error: null },
 
+    // Async jobs
+    jobs: { list: [], submitting: false, _poll: null },
+
+    // WebSocket: alerts + live signals
+    alerts: { status: 'disconnected', events: [], _ws: null },
+    live:   { status: 'disconnected', events: [], count: 0, last: null, _ws: null },
+
     // helpers
     fmt(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return (+v).toFixed(d); },
     pct(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return ((+v)*100).toFixed(d)+'%'; },
@@ -496,7 +619,13 @@ function qf() {
     },
 
     async init() {
-      this.$watch('active', v => localStorage.setItem('qf_active', v));
+      this.$watch('active', v => {
+        localStorage.setItem('qf_active', v);
+        // lazy-connect WS on first visit to those pages
+        if (v === 'alerts' && !this.alerts._ws) this.connectAlerts();
+        if (v === 'live'   && !this.live._ws)   this.connectLive();
+        if (v === 'jobs')                       this.refreshJobs();
+      });
       try {
         const h = await (await fetch('/healthz')).json();
         this.apiStatus = h.status;
@@ -506,6 +635,112 @@ function qf() {
       // render on tab change
       this.$watch('active', () => { this.$nextTick(() => this.renderCharts()); });
       this.$nextTick(() => this.renderCharts());
+
+      // Jobs polling tick: refresh every 3s while on the page
+      this.jobs._poll = setInterval(() => {
+        if (this.active === 'jobs' && this.apiKey) this.refreshJobs();
+      }, 3000);
+    },
+
+    // ---- Jobs ---------------------------------------------------------------
+    async refreshJobs() {
+      if (!this.apiKey) return;
+      try {
+        this.jobs.list = await this.api('/v1/jobs?limit=20');
+      } catch (e) { /* silent */ }
+    },
+    async submitJobBacktest() {
+      this.jobs.submitting = true;
+      try {
+        await this.api('/v1/jobs/backtest', {
+          method: 'POST',
+          body: JSON.stringify({
+            strategy: 'dual_momentum', tickers: ['SPY','QQQ','IWM','TLT','GLD'],
+            start: '2015-01-01', end: '2025-01-01',
+            capital: 100000, sizing_fraction: 1.0, rebalance: 'monthly',
+          }),
+        });
+        await this.refreshJobs();
+      } catch (e) { alert('submit failed: ' + e.message); }
+      this.jobs.submitting = false;
+    },
+    async cancelJob(id) {
+      try {
+        await this.api(`/v1/jobs/${id}`, { method: 'DELETE' });
+        await this.refreshJobs();
+      } catch (e) {}
+    },
+
+    // ---- WebSocket utilities ----------------------------------------------
+    _openWs(topic, onEvent) {
+      const key = encodeURIComponent(this.apiKey || '');
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      const host  = location.host || 'localhost:8000';
+      const url   = `${proto}://${host}/ws/events?topic=${encodeURIComponent(topic)}&api_key=${key}`;
+      try {
+        const ws = new WebSocket(url);
+        ws.onopen  = () => onEvent({ type: 'open' });
+        ws.onclose = () => onEvent({ type: 'close' });
+        ws.onerror = () => onEvent({ type: 'error' });
+        ws.onmessage = (ev) => {
+          try { onEvent({ type: 'message', data: JSON.parse(ev.data) }); }
+          catch (_) {}
+        };
+        return ws;
+      } catch (e) {
+        return null;
+      }
+    },
+
+    connectAlerts() {
+      if (this.alerts._ws) { try { this.alerts._ws.close(); } catch (_) {} }
+      this.alerts.status = 'connecting';
+      this.alerts._ws = this._openWs('alerts', (ev) => {
+        if (ev.type === 'open')  this.alerts.status = 'connected';
+        if (ev.type === 'close') this.alerts.status = 'disconnected';
+        if (ev.type === 'error') this.alerts.status = 'error';
+        if (ev.type === 'message' && ev.data.topic !== 'system') {
+          this.alerts.events.unshift(ev.data);
+          if (this.alerts.events.length > 200) this.alerts.events.pop();
+        }
+      });
+    },
+
+    connectLive() {
+      if (this.live._ws) { try { this.live._ws.close(); } catch (_) {} }
+      this.live.status = 'connecting';
+      this.live._ws = this._openWs('signals', (ev) => {
+        if (ev.type === 'open')  this.live.status = 'connected';
+        if (ev.type === 'close') this.live.status = 'disconnected';
+        if (ev.type === 'error') this.live.status = 'error';
+        if (ev.type === 'message' && ev.data.topic === 'signals') {
+          this.live.events.unshift(ev.data);
+          this.live.last = ev.data.data;
+          this.live.count = this.live.events.filter(e => (Date.now()/1000 - e.ts) < 60).length;
+          if (this.live.events.length > 200) this.live.events.pop();
+        }
+      });
+    },
+
+    demoAlert() {
+      const msg = { topic: 'alerts', ts: Date.now()/1000, data: {
+        severity: 'warning', title: 'Demo alert',
+        detail: 'This is a local demo — fired from the UI, no server round-trip.'
+      }};
+      this.alerts.events.unshift(msg);
+    },
+    demoSignal() {
+      const symbols = ['SPY','QQQ','IWM','TLT','GLD','BTC-USD'];
+      const strats  = ['momentum','dual_momentum','donchian','regime_switch'];
+      const dir = [-1, 0, 1][Math.floor(Math.random() * 3)];
+      const msg = { topic: 'signals', ts: Date.now()/1000, data: {
+        symbol: symbols[Math.floor(Math.random() * symbols.length)],
+        direction: dir,
+        strategy: strats[Math.floor(Math.random() * strats.length)],
+      }};
+      this.live.events.unshift(msg);
+      this.live.last = msg.data;
+      this.live.count += 1;
     },
 
     async loadOverview() {
