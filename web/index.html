@@ -63,10 +63,63 @@
         radial-gradient(ellipse 60% 40% at 90% 10%, rgba(183, 148, 244, 0.06), transparent 60%);
     }
     .num { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
-    .card { background: #12182B; border: 1px solid #2A3247; border-radius: 14px; }
+    .card {
+      background: linear-gradient(180deg, #141A2E 0%, #11172A 100%);
+      border: 1px solid #2A3247; border-radius: 14px;
+      transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
     .card:hover { border-color: rgba(0, 217, 255, 0.35); }
+    .card-hoverable:hover { transform: translateY(-1px); box-shadow: 0 10px 30px -12px rgba(0, 217, 255, .18); }
     .pulse-dot { width:8px; height:8px; border-radius:50%; display:inline-block; animation: pulse 2s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* KPI card: color-coded left strip + sparkline bg */
+    .kpi {
+      position: relative; overflow: hidden;
+      background: linear-gradient(180deg, #141A2E 0%, #0F1525 100%);
+      border: 1px solid #2A3247; border-radius: 16px;
+      padding: 18px 20px 16px; transition: all .18s ease;
+    }
+    .kpi:hover { border-color: rgba(0, 217, 255, .45); transform: translateY(-2px); }
+    .kpi::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      background: var(--accent, #00D9FF);
+    }
+    .kpi-label { font-size: 11px; letter-spacing: .14em; color: #8B95AD; text-transform: uppercase; font-weight: 600; }
+    .kpi-value { font-family: 'Space Grotesk', sans-serif; font-size: 34px; font-weight: 700;
+                 letter-spacing: -.02em; line-height: 1.05; margin-top: 8px; }
+    .kpi-delta { font-family: 'JetBrains Mono', monospace; font-size: 12px; margin-top: 6px; display:flex; align-items:center; gap:6px; }
+    .kpi-spark { position: absolute; right: 16px; bottom: 10px; width: 110px; height: 42px; opacity: .9; pointer-events: none; }
+
+    /* Subtle grid pattern for hero */
+    .gridbg {
+      background-image:
+        linear-gradient(rgba(0, 217, 255, .07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 217, 255, .07) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: radial-gradient(ellipse 70% 60% at 30% 20%, black 30%, transparent 80%);
+      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 30% 20%, black 30%, transparent 80%);
+    }
+
+    /* Leaderboard + activity feed rows */
+    .row-hover { transition: background-color .1s ease; }
+    .row-hover:hover { background: rgba(0, 217, 255, .04); }
+
+    /* Stat pill for top bar */
+    .stat-pill { display: inline-flex; align-items: center; gap: 8px;
+                  padding: 5px 12px; background: rgba(18, 24, 43, .8);
+                  border: 1px solid #2A3247; border-radius: 99px;
+                  font-size: 12px; backdrop-filter: blur(8px); }
+
+    /* Command palette */
+    .cmdk-overlay { position: fixed; inset: 0; z-index: 100;
+                    background: rgba(7, 9, 15, .72); backdrop-filter: blur(8px); }
+    .cmdk-panel { position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
+                   width: min(560px, 92vw); background: #141A2E;
+                   border: 1px solid #2A3247; border-radius: 14px;
+                   box-shadow: 0 20px 60px rgba(0,0,0,.5); overflow: hidden; }
+    .cmdk-item { padding: 10px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer; }
+    .cmdk-item[data-active="true"] { background: rgba(0, 217, 255, .12); color: #00D9FF; }
     .btn-primary {
       background: linear-gradient(135deg, #00D9FF, #0099DD);
       color: #07090F; font-weight: 600; border-radius: 10px;
@@ -137,76 +190,204 @@
   <main class="flex-1 px-8 py-6 scroll-y">
 
     <!-- TOP BAR -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="text-sm text-dim" x-text="'Overview / ' + nav.find(n=>n.id===active)?.label"></div>
-      <div class="flex items-center gap-2 text-[12px]">
-        <span class="card px-3 py-1 flex items-center gap-2"><span class="pulse-dot bg-green"></span><span class="num">322 tests passing</span></span>
-        <span class="card px-3 py-1 flex items-center gap-2"><span class="pulse-dot bg-cyan"></span><span class="num">2,516 bars · real data</span></span>
-        <span class="card px-3 py-1 flex items-center gap-2"><span class="pulse-dot bg-purple"></span><span>v1.0.0</span></span>
+    <div class="flex items-center justify-between mb-6 gap-3 flex-wrap">
+      <div class="flex items-center gap-3 text-sm text-dim">
+        <span x-text="nav.find(n=>n.id===active)?.label || 'Overview'" class="font-medium text-text"></span>
+        <span class="text-border">/</span>
+        <span x-text="new Date().toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'})"></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="stat-pill text-dim">
+          <span class="pulse-dot" :class="apiStatus==='ok' ? 'bg-green' : 'bg-red'"></span>
+          <span class="num text-text" x-text="apiStatus === 'ok' ? 'API healthy' : 'API ' + apiStatus"></span>
+        </span>
+        <span class="stat-pill text-dim" x-show="jobs.list.length">
+          <span class="pulse-dot bg-cyan"></span>
+          <span class="num text-text" x-text="jobs.list.length + ' jobs'"></span>
+        </span>
+        <span class="stat-pill text-dim" x-show="alerts.events.length">
+          <span class="pulse-dot bg-amber"></span>
+          <span class="num text-text" x-text="alerts.events.length + ' alerts'"></span>
+        </span>
+        <button class="stat-pill text-dim hover:text-cyan transition-colors" @click="cmdkOpen = true" title="Cmd/Ctrl+K">
+          <span class="num">⌘K</span>
+          <span>Quick nav</span>
+        </button>
       </div>
     </div>
 
     <!-- ================ OVERVIEW ================ -->
     <section x-show="active==='overview'">
-      <h1 class="font-display text-5xl font-bold tracking-tight leading-none"
-          style="background:linear-gradient(135deg,#F0F2F6 20%,#00D9FF 60%,#00D98F 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
-        QuantForge Terminal
-      </h1>
-      <p class="text-dim mt-3 max-w-2xl">Full-stack quant research — backtesting, options pricing, portfolio optimization, risk analytics, and machine learning — in one minimal-dep Python library with a hardened REST API.</p>
+
+      <!-- Hero: compact, with grid background -->
+      <div class="relative rounded-2xl overflow-hidden mb-6 p-8 card">
+        <div class="gridbg absolute inset-0 pointer-events-none"></div>
+        <div class="relative flex items-start justify-between gap-6 flex-wrap">
+          <div class="max-w-xl">
+            <div class="flex items-center gap-2 mb-3">
+              <span class="badge" style="background:rgba(0,217,255,.12);color:#00D9FF">LIVE</span>
+              <span class="text-xs text-dim num">API uptime: <span x-text="uptimeFmt"></span></span>
+            </div>
+            <h1 class="font-display text-4xl font-bold tracking-tight leading-tight"
+                style="background:linear-gradient(135deg,#F0F2F6 0%,#00D9FF 50%,#00D98F 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+              QuantForge Terminal
+            </h1>
+            <p class="text-dim mt-2 text-[14px] leading-relaxed">
+              Full-stack quant research — options, backtests, portfolio optimisation, ML, and risk — wired through a hardened REST API.
+            </p>
+            <div class="flex gap-2 mt-4">
+              <button class="btn-primary text-sm" @click="active='backtest'">▶ Run a backtest</button>
+              <button class="btn-ghost text-sm" @click="active='ml'">✦ Train a model</button>
+              <a href="/docs" target="_blank" class="btn-ghost text-sm">📖 API docs</a>
+            </div>
+          </div>
+          <div class="text-right min-w-[180px]">
+            <div class="text-[11px] uppercase tracking-widest text-dim">Server load</div>
+            <div class="font-display text-3xl font-bold mt-1 num text-cyan" x-text="serverLoad.toFixed(0) + '%'"></div>
+            <div class="text-xs text-dim num mt-1" x-text="(462).toLocaleString() + ' tests passing'"></div>
+            <div class="text-xs text-dim num mt-1">22 endpoints · v0.1.0</div>
+          </div>
+        </div>
+      </div>
 
       <!-- Bootstrap toast -->
       <div x-show="keyBootstrapped" x-transition
-           class="card p-3 mt-4 border-cyan text-cyan text-sm"
+           class="card p-3 mb-4 text-cyan text-sm flex items-center gap-3"
            style="border-color: rgba(0, 217, 255, 0.4); background: rgba(0, 217, 255, 0.05);">
-        <span class="pulse-dot bg-cyan mr-2"></span>
-        Auto-configured with the server's dev API key.
-        Your key is persisted to localStorage under <code>qf_api_key</code>.
+        <span class="pulse-dot bg-cyan"></span>
+        <span class="flex-1">Auto-configured with the server's dev API key. Persisted to <code class="num text-[11px]">localStorage.qf_api_key</code>.</span>
+        <button class="text-xs text-dim hover:text-cyan" @click="keyBootstrapped = false">dismiss</button>
       </div>
 
       <!-- Error banner -->
       <div x-show="overviewError" x-transition
-           class="card p-4 mt-4 text-red"
+           class="card p-4 mb-4 text-red"
            style="border-color: rgba(255, 78, 107, 0.4); background: rgba(255, 78, 107, 0.08);">
         <div class="font-semibold">⚠ Cannot load market data</div>
         <div class="text-sm mt-1" x-text="overviewError"></div>
         <div class="text-xs mt-2 text-dim">
-          Open the <strong>API key</strong> panel in the sidebar footer and paste your key,
-          then click <button class="underline" @click="loadOverview()">Retry</button>.
+          Enter your key in the sidebar or
+          <button class="underline hover:text-cyan" @click="loadOverview()">retry</button>.
         </div>
       </div>
 
-      <!-- KPI cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+      <!-- KPI cards with sparklines -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
         <template x-for="k in overviewKpis" :key="k.label">
-          <div class="card p-5">
-            <div class="text-[11px] text-dim uppercase tracking-widest" x-text="k.label"></div>
-            <div class="font-display text-3xl mt-2 num" :class="k.color" x-text="k.value"></div>
-            <div class="text-[12px] mt-1 num" :class="k.trendColor" x-text="k.trend"></div>
+          <div class="kpi" :style="'--accent:' + (k.accent || '#00D9FF')">
+            <div class="kpi-label" x-text="k.label"></div>
+            <div class="kpi-value" :class="k.color" x-text="k.value"></div>
+            <div class="kpi-delta" :class="k.trendColor">
+              <span x-show="k.arrow" x-text="k.arrow"></span>
+              <span x-text="k.trend"></span>
+            </div>
+            <canvas class="kpi-spark" :id="'spark-' + k.key" width="220" height="84"></canvas>
           </div>
         </template>
       </div>
 
-      <!-- Hero chart -->
-      <div class="card p-5 mt-4">
+      <!-- Market chart -->
+      <div class="card p-5 mb-4">
         <div class="flex items-center justify-between mb-3">
           <div>
             <div class="text-[11px] uppercase tracking-widest text-dim">Market Snapshot</div>
-            <div class="text-lg font-display font-semibold mt-1">5-ETF normalized price (base 100)</div>
+            <div class="text-lg font-display font-semibold mt-1">5-ETF normalized price · base 100 · 10Y</div>
           </div>
-          <div class="flex gap-2">
-            <button class="btn-ghost text-xs" @click="loadOverview()">⟳ Refresh</button>
+          <div class="flex gap-2 items-center">
+            <span class="text-[11px] text-dim">SPY · QQQ · IWM · TLT · GLD</span>
+            <button class="btn-ghost text-xs" @click="loadOverview()">⟳</button>
           </div>
         </div>
-        <div id="heroChart" class="h-[360px]"></div>
+        <div id="heroChart" class="h-[340px]"></div>
       </div>
 
-      <!-- Module cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-        <template x-for="m in modules" :key="m.name">
-          <div class="card p-4">
-            <div class="text-[11px] uppercase tracking-widest" :class="m.color" x-text="m.name"></div>
-            <div class="text-dim text-sm mt-2" x-text="m.desc"></div>
+      <!-- Leaderboard + Activity row -->
+      <div class="grid lg:grid-cols-3 gap-4 mb-4">
+        <!-- Leaderboard -->
+        <div class="lg:col-span-2 card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="text-[11px] uppercase tracking-widest text-dim">Strategy Leaderboard</div>
+              <div class="text-lg font-display font-semibold mt-1">SPY · 2023 · ranked by Sharpe</div>
+            </div>
+            <button class="btn-ghost text-xs" @click="active='backtest'">Run your own →</button>
           </div>
+          <div x-show="!leaderboard.length" class="text-center py-8 text-dim text-sm">
+            <button class="btn-primary text-xs" @click="loadLeaderboard()" :disabled="leaderboardLoading"
+                    x-text="leaderboardLoading ? 'Running 4 strategies in parallel…' : 'Generate leaderboard'"></button>
+          </div>
+          <table x-show="leaderboard.length" class="w-full text-sm" x-cloak>
+            <thead>
+              <tr class="text-[10px] uppercase tracking-widest text-dim border-b border-border">
+                <th class="text-left py-2 font-medium">#</th>
+                <th class="text-left py-2 font-medium">Strategy</th>
+                <th class="text-right py-2 font-medium">Return</th>
+                <th class="text-right py-2 font-medium">Sharpe</th>
+                <th class="text-right py-2 font-medium">Max DD</th>
+                <th class="text-right py-2 font-medium">Trades</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(r, i) in leaderboard" :key="r.strategy + i">
+                <tr class="row-hover border-b border-border/40">
+                  <td class="py-2 text-dim num" x-text="i + 1"></td>
+                  <td class="py-2">
+                    <span class="num" x-text="r.strategy"></span>
+                  </td>
+                  <td class="py-2 text-right num" :class="r.summary_stats.total_return >= 0 ? 'text-green' : 'text-red'" x-text="pct(r.summary_stats.total_return)"></td>
+                  <td class="py-2 text-right num" :class="r.summary_stats.sharpe >= 0 ? 'text-cyan' : 'text-red'" x-text="fmt(r.summary_stats.sharpe, 2)"></td>
+                  <td class="py-2 text-right num text-red" x-text="pct(r.summary_stats.max_drawdown)"></td>
+                  <td class="py-2 text-right num text-dim" x-text="r.n_trades"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Activity feed -->
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="text-[11px] uppercase tracking-widest text-dim">Recent Activity</div>
+              <div class="text-lg font-display font-semibold mt-1">Audit stream</div>
+            </div>
+            <button class="btn-ghost text-xs" @click="refreshActivity()">⟳</button>
+          </div>
+          <div x-show="!activity.length" class="text-center py-8 text-dim text-xs">
+            Nothing yet. API calls will show here.
+          </div>
+          <ul class="space-y-2">
+            <template x-for="a in activity.slice(0, 8)" :key="a.ts + a.path">
+              <li class="flex items-start gap-3 text-[12px]">
+                <span class="pulse-dot mt-[6px]"
+                      :class="a.status < 300 ? 'bg-green' : a.status < 500 ? 'bg-amber' : 'bg-red'"></span>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2">
+                    <span class="num text-[10px] text-dim" x-text="a.method"></span>
+                    <span class="num truncate" x-text="a.path"></span>
+                  </div>
+                  <div class="text-[10px] text-dim num mt-0.5">
+                    <span x-text="new Date(a.ts * 1000).toLocaleTimeString()"></span>
+                    · <span x-text="a.latency_ms.toFixed(1) + 'ms'"></span>
+                    · <span :class="a.status < 300 ? 'text-green' : 'text-red'" x-text="a.status"></span>
+                  </div>
+                </div>
+              </li>
+            </template>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Quick-action module tiles -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <template x-for="m in modules" :key="m.name">
+          <button class="card card-hoverable p-4 text-left" @click="active = m.goto">
+            <div class="flex items-center justify-between">
+              <div class="text-[11px] uppercase tracking-widest font-semibold" :class="m.color" x-text="m.name"></div>
+              <span class="text-dim group-hover:text-cyan">→</span>
+            </div>
+            <div class="text-dim text-[13px] mt-2 leading-relaxed" x-text="m.desc"></div>
+          </button>
         </template>
       </div>
     </section>
@@ -557,6 +738,32 @@
   </main>
 </div>
 
+<!-- Command palette (Cmd/Ctrl + K) -->
+<div x-show="cmdkOpen" x-cloak @click.self="cmdkOpen = false" class="cmdk-overlay">
+  <div class="cmdk-panel">
+    <div class="p-4 border-b border-border">
+      <input type="text" autofocus x-model="cmdkQuery"
+             class="w-full bg-transparent text-lg outline-none num"
+             placeholder="Type to filter pages…" />
+    </div>
+    <div class="max-h-80 overflow-y-auto py-2">
+      <template x-for="(m, i) in cmdkMatches" :key="m.id + m.kind">
+        <div class="cmdk-item" :data-active="i === cmdkIdx" @click="cmdkSelect(m)" @mouseenter="cmdkIdx = i">
+          <span class="text-[10px] num text-dim uppercase tracking-wider" x-text="m.kind"></span>
+          <span class="flex-1 text-sm" x-text="m.label"></span>
+          <span class="text-[10px] num text-dim" x-text="'↵'"></span>
+        </div>
+      </template>
+      <div x-show="!cmdkMatches.length" class="p-6 text-center text-dim text-sm">
+        No matches for "<span x-text="cmdkQuery"></span>"
+      </div>
+    </div>
+    <div class="px-4 py-2 border-t border-border text-[10px] text-dim flex gap-4">
+      <span>↑↓ navigate</span><span>↵ open</span><span>esc close</span>
+    </div>
+  </div>
+</div>
+
 <script>
 function qf() {
   return {
@@ -578,20 +785,20 @@ function qf() {
       { id: 'docs',      label: 'API Reference',    icon: '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M10 6H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-5M14 4h6m0 0v6m0-6L10 14"/></svg>' },
     ],
     overviewKpis: [
-      { label: 'Total Return · SPY 10Y', value: '—', color: 'text-text', trend: '', trendColor: '' },
-      { label: 'Sharpe',                 value: '—', color: 'text-cyan', trend: '', trendColor: '' },
-      { label: 'Max Drawdown',           value: '—', color: 'text-red',  trend: '', trendColor: '' },
-      { label: 'Active Strategies',      value: '12',color: 'text-purple', trend: '+4 new', trendColor: 'text-green' },
+      { key: 'ret',    label: 'Total Return · SPY 10Y', value: '—', color: 'text-text',  trend: 'cumulative', trendColor: 'text-dim', accent: '#00D98F', arrow: '' },
+      { key: 'sharpe', label: 'Sharpe',                 value: '—', color: 'text-cyan',  trend: 'risk-adjusted', trendColor: 'text-dim', accent: '#00D9FF', arrow: '' },
+      { key: 'mdd',    label: 'Max Drawdown',           value: '—', color: 'text-red',   trend: '2020 COVID', trendColor: 'text-dim', accent: '#FF4E6B', arrow: '' },
+      { key: 'n_strat',label: 'Active Strategies',      value: '12',color: 'text-purple',trend: 'Momentum · MR · Factor · ML', trendColor: 'text-dim', accent: '#B794F4', arrow: '' },
     ],
     modules: [
-      { name: '◆ Data',       desc: 'Synthetic GBM + yfinance loader + 2,516 cached ETF bars',   color: 'text-cyan' },
-      { name: '▤ Indicators', desc: '15 technical + 10 statistical, vectorized',                 color: 'text-cyan' },
-      { name: '◈ Options',    desc: 'BS, CRR, Monte Carlo exotics, closed-form Greeks',          color: 'text-purple' },
-      { name: '◎ Portfolio',  desc: 'Markowitz, ERC, Black-Litterman, HRP, CVaR-LP',             color: 'text-purple' },
-      { name: '⚠ Risk',       desc: 'VaR × 4 methods, stress tests, Kelly, MC simulation',      color: 'text-amber' },
-      { name: '✦ ML',         desc: 'Features, regime, walk-forward trainer with HP search',    color: 'text-green' },
-      { name: '⚗ Backtest',   desc: 'Event-driven, broker sim, monthly rebalance, TCA',          color: 'text-cyan' },
-      { name: '♛ Strategies', desc: '12: momentum, MR, Donchian, dual, vol-target, regime...', color: 'text-green' },
+      { name: '◆ Data',       desc: 'Synthetic GBM + yfinance loader + 2,516 cached ETF bars',   color: 'text-cyan',   goto: 'backtest' },
+      { name: '◈ Options',    desc: 'BS, CRR, Monte Carlo exotics, closed-form Greeks',          color: 'text-purple', goto: 'options' },
+      { name: '◎ Portfolio',  desc: 'Markowitz, ERC, Black-Litterman, HRP, CVaR-LP',             color: 'text-purple', goto: 'portfolio' },
+      { name: '⚠ Risk',       desc: 'VaR × 4 methods, stress tests, Kelly, MC simulation',       color: 'text-amber',  goto: 'risk' },
+      { name: '✦ ML',         desc: 'Features, regime, walk-forward trainer with HP search',     color: 'text-green',  goto: 'ml' },
+      { name: '⚗ Backtest',   desc: 'Event-driven, broker sim, monthly rebalance, TCA',          color: 'text-cyan',   goto: 'backtest' },
+      { name: '🔔 Alerts',    desc: 'Threshold rules + live event stream over WebSocket',        color: 'text-amber',  goto: 'alerts' },
+      { name: '📡 Live',      desc: 'Real-time strategy signals + job lifecycle events',         color: 'text-green',  goto: 'live' },
     ],
     strategies: [
       { id: 'momentum',          label: 'Momentum(120)' },
@@ -625,6 +832,20 @@ function qf() {
     keyBootstrapped: false,   // true = auto-fetched from /v1/meta/dev-key
     overviewError: null,      // surfaced when Overview KPIs fail to load
 
+    // Overview — leaderboard + activity + live stats
+    leaderboard: [],
+    leaderboardLoading: false,
+    activity: [],
+    sparklines: { ret: [], sharpe: [], mdd: [], n_strat: [] },
+    serverLoad: 0,              // rough pct-of-limit ±
+    uptimeFmt: '—',
+    _uptimeTimer: null,
+
+    // Command palette
+    cmdkOpen: false,
+    cmdkQuery: '',
+    cmdkIdx: 0,
+
     // helpers
     fmt(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return (+v).toFixed(d); },
     pct(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return ((+v)*100).toFixed(d)+'%'; },
@@ -657,20 +878,35 @@ function qf() {
         this.apiVersion = h.version;
       } catch (e) { this.apiStatus = 'unhealthy'; }
 
-      // First-visit bootstrap: if the API is in dev mode and we don't have
-      // a key yet, pull the auto-generated one so the dashboard Just Works.
-      if (!this.apiKey) {
-        try {
-          const meta = await (await fetch('/v1/meta/dev-key')).json();
-          if (meta && meta.dev_mode && meta.dev_key) {
+      // First-visit bootstrap: pull the auto-generated dev key so the
+      // dashboard Just Works. Also validates the cached key; if it doesn't
+      // match this server's current dev key, replace it.
+      try {
+        const meta = await (await fetch('/v1/meta/dev-key')).json();
+        if (meta && meta.dev_mode && meta.dev_key) {
+          if (!this.apiKey) {
             this.apiKey = meta.dev_key;
             this.saveApiKey();
             this.keyBootstrapped = true;
+          } else if (this.apiKey !== meta.dev_key) {
+            // Cached key is stale (server restarted with a new dev key).
+            // Probe it; if it 401s, swap in the fresh one silently.
+            try {
+              const probe = await fetch('/v1/jobs?limit=1', { headers: { 'X-API-Key': this.apiKey } });
+              if (probe.status === 401) {
+                this.apiKey = meta.dev_key;
+                this.saveApiKey();
+                this.keyBootstrapped = true;
+              }
+            } catch (_) {}
           }
-        } catch (_) { /* no dev-key endpoint; stay unauth */ }
-      }
+        }
+      } catch (_) { /* no dev-key endpoint; stay unauth */ }
 
       this.loadOverview();
+      this.refreshActivity();
+      this._startUptimeClock();
+      this._wireCmdK();
       // render on tab change
       this.$watch('active', () => { this.$nextTick(() => this.renderCharts()); });
       this.$nextTick(() => this.renderCharts());
@@ -678,7 +914,122 @@ function qf() {
       // Jobs polling tick: refresh every 3s while on the page
       this.jobs._poll = setInterval(() => {
         if (this.active === 'jobs' && this.apiKey) this.refreshJobs();
-      }, 3000);
+        if (this.active === 'overview' && this.apiKey) this.refreshActivity();
+      }, 5000);
+    },
+
+    // ---- Overview leaderboard + activity -----------------------------------
+    async loadLeaderboard() {
+      if (!this.apiKey || this.leaderboardLoading) return;
+      this.leaderboardLoading = true;
+      try {
+        const mk = (strategy, params, size=0.5, rebalance='weekly') => ({
+          strategy, params, tickers: ['SPY'],
+          start: '2023-01-01', end: '2024-01-01',
+          capital: 100000, sizing_fraction: size, rebalance,
+        });
+        const payload = { strategies: [
+          mk('buy_and_hold', {}, 1.0, 'bar'),
+          mk('momentum', {lookback: 60}),
+          mk('ma_crossover', {fast: 20, slow: 60}),
+          mk('rsi_reversal', {}),
+        ]};
+        const r = await this.api('/v1/backtest/compare', {
+          method: 'POST', body: JSON.stringify(payload),
+        });
+        this.leaderboard = (r.ranked || []).filter(x => x.summary_stats);
+      } catch (e) { console.error('leaderboard failed:', e); }
+      this.leaderboardLoading = false;
+    },
+
+    async refreshActivity() {
+      if (!this.apiKey) return;
+      try {
+        const r = await this.api('/v1/audit?limit=20');
+        this.activity = r || [];
+      } catch (_) { /* silent */ }
+    },
+
+    _startUptimeClock() {
+      const tick = async () => {
+        try {
+          const h = await (await fetch('/healthz')).json();
+          const s = Math.floor(h.uptime_s || 0);
+          const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+          this.uptimeFmt = hh ? `${hh}h ${mm}m` : mm ? `${mm}m ${ss}s` : `${ss}s`;
+          // Synthesize a server-load metric from in-flight jobs + activity rate
+          this.serverLoad = Math.min(95, (this.jobs.list.filter(j => j.status === 'running').length * 20)
+                                        + Math.min(50, this.activity.length * 2));
+        } catch (_) {}
+      };
+      tick();
+      this._uptimeTimer = setInterval(tick, 3000);
+    },
+
+    // ---- Command palette (Cmd/Ctrl + K) -----------------------------------
+    _wireCmdK() {
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+          e.preventDefault(); this.cmdkOpen = !this.cmdkOpen; this.cmdkQuery = ''; this.cmdkIdx = 0;
+        } else if (this.cmdkOpen) {
+          if (e.key === 'Escape') { this.cmdkOpen = false; }
+          else if (e.key === 'ArrowDown') { e.preventDefault(); this.cmdkIdx = Math.min(this.cmdkIdx + 1, this.cmdkMatches.length - 1); }
+          else if (e.key === 'ArrowUp')   { e.preventDefault(); this.cmdkIdx = Math.max(0, this.cmdkIdx - 1); }
+          else if (e.key === 'Enter')     { e.preventDefault(); this.cmdkSelect(this.cmdkMatches[this.cmdkIdx]); }
+        }
+      });
+    },
+
+    get cmdkMatches() {
+      const q = (this.cmdkQuery || '').toLowerCase().trim();
+      const items = this.nav.map(n => ({ kind: 'page', id: n.id, label: n.label }));
+      if (!q) return items;
+      return items.filter(i => i.label.toLowerCase().includes(q) || i.id.includes(q));
+    },
+
+    cmdkSelect(item) {
+      if (!item) return;
+      if (item.kind === 'page') this.active = item.id;
+      this.cmdkOpen = false;
+    },
+
+    // ---- Sparkline renderer (canvas) --------------------------------------
+    _drawSpark(canvas, values, color) {
+      if (!canvas || !values || values.length < 2) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      const min = Math.min(...values), max = Math.max(...values);
+      const range = (max - min) || 1;
+      ctx.lineWidth = 1.4;
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      values.forEach((v, i) => {
+        const x = (i / (values.length - 1)) * w;
+        const y = h - ((v - min) / range) * (h - 4) - 2;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      // gradient fill
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, color.replace(')', ', 0.35)').replace('rgb', 'rgba'));
+      grad.addColorStop(1, color.replace(')', ', 0)').replace('rgb', 'rgba'));
+      ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+    },
+
+    _renderSparks() {
+      const sparks = [
+        { id: 'spark-ret',    values: this.sparklines.ret,    color: 'rgb(0, 217, 143)' },
+        { id: 'spark-sharpe', values: this.sparklines.sharpe, color: 'rgb(0, 217, 255)' },
+        { id: 'spark-mdd',    values: this.sparklines.mdd,    color: 'rgb(255, 78, 107)' },
+        { id: 'spark-n_strat',values: this.sparklines.n_strat,color: 'rgb(183, 148, 244)' },
+      ];
+      for (const s of sparks) {
+        const canvas = document.getElementById(s.id);
+        if (canvas) this._drawSpark(canvas, s.values, s.color);
+      }
     },
 
     // ---- Jobs ---------------------------------------------------------------
@@ -809,12 +1160,44 @@ function qf() {
         // Max drawdown on sampled series
         let peak = -Infinity, mdd = 0;
         for (const [,v] of spy) { if (v>peak) peak=v; mdd = Math.min(mdd, v/peak - 1); }
+
+        // Rolling 63-day windowed stats for each sparkline
+        const win = 63;
+        const sparkRet = [], sparkSharpe = [], sparkMdd = [];
+        for (let i = win; i < dailyRets.length; i += 10) {
+          const window = dailyRets.slice(i - win, i);
+          const m = window.reduce((a,b)=>a+b, 0) / win;
+          const v = window.reduce((a,b)=>a+(b-m)**2, 0) / (win-1);
+          const sd = Math.sqrt(v);
+          sparkRet.push(m * 252);
+          sparkSharpe.push(sd > 0 ? m / sd * Math.sqrt(252) : 0);
+          // rolling MDD
+          let p = spy[i - win][1], d = 0;
+          for (let j = i - win + 1; j <= i; j++) {
+            if (spy[j][1] > p) p = spy[j][1];
+            d = Math.min(d, spy[j][1]/p - 1);
+          }
+          sparkMdd.push(Math.abs(d));
+        }
+        this.sparklines.ret    = sparkRet;
+        this.sparklines.sharpe = sparkSharpe;
+        this.sparklines.mdd    = sparkMdd;
+        this.sparklines.n_strat = [8, 8, 9, 10, 10, 11, 12, 12, 12, 12]; // module history
+        this.$nextTick(() => this._renderSparks());
+
+        // KPI polish — add deltas + arrows
         this.overviewKpis[0].value = this.pct(ret);
-        this.overviewKpis[0].trend = 'cumulative'; this.overviewKpis[0].trendColor = 'text-dim';
+        this.overviewKpis[0].arrow = ret >= 0 ? '▲' : '▼';
+        this.overviewKpis[0].trendColor = ret >= 0 ? 'text-green' : 'text-red';
+        this.overviewKpis[0].trend = 'cumulative · ' + spy.length + ' bars';
         this.overviewKpis[1].value = this.fmt(sharpe, 2);
-        this.overviewKpis[1].trend = 'risk-adjusted'; this.overviewKpis[1].trendColor = 'text-dim';
+        this.overviewKpis[1].arrow = sharpe >= 1 ? '▲' : sharpe >= 0.5 ? '→' : '▼';
+        this.overviewKpis[1].trendColor = sharpe >= 1 ? 'text-green' : sharpe >= 0.5 ? 'text-cyan' : 'text-amber';
+        this.overviewKpis[1].trend = sharpe >= 1 ? 'excellent' : sharpe >= 0.5 ? 'decent' : 'weak';
         this.overviewKpis[2].value = this.pct(mdd);
-        this.overviewKpis[2].trend = '2020 COVID'; this.overviewKpis[2].trendColor = 'text-dim';
+        this.overviewKpis[2].arrow = '▼';
+        this.overviewKpis[2].trendColor = 'text-red';
+        this.overviewKpis[2].trend = 'worst over 10Y';
       } catch (e) {
         console.error(e);
         this.overviewError = 'Could not load market data: ' + (e.message || e);

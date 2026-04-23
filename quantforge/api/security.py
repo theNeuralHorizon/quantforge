@@ -10,25 +10,50 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 
+# Strict CSP for API + JSON routes — no inline eval, no third-party scripts.
+_BASE_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "font-src 'self' data:; "
+    "img-src 'self' data:; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'"
+)
+
+# Relaxed CSP for the static /ui/ dashboard + Swagger/ReDoc.
+# Alpine.js needs 'unsafe-eval' for its inline expressions; Tailwind + Alpine
+# + ApexCharts load from CDNs. WebSocket upgrades (ws:/wss:) to same origin
+# are needed for /ws/events.
+_UI_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
+        "cdn.tailwindcss.com cdn.jsdelivr.net unpkg.com; "
+    "style-src 'self' 'unsafe-inline' fonts.googleapis.com cdn.jsdelivr.net; "
+    "font-src 'self' fonts.gstatic.com data:; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self' ws: wss:; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'"
+)
+
 SECURE_HEADERS = {
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
-    "Content-Security-Policy": (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdn.jsdelivr.net unpkg.com; "
-        "style-src 'self' 'unsafe-inline' fonts.googleapis.com cdn.jsdelivr.net; "
-        "font-src 'self' fonts.gstatic.com data:; "
-        "img-src 'self' data: https:; "
-        "connect-src 'self'; "
-        "frame-ancestors 'none'; "
-        "base-uri 'self'"
-    ),
     "Cross-Origin-Opener-Policy": "same-origin",
     "Cross-Origin-Resource-Policy": "same-site",
 }
+
+
+def _csp_for(path: str) -> str:
+    """Per-route CSP: relax for interactive UI, strict for everything else."""
+    if path.startswith(("/ui", "/docs", "/redoc")):
+        return _UI_CSP
+    return _BASE_CSP
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -36,6 +61,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         for k, v in SECURE_HEADERS.items():
             response.headers.setdefault(k, v)
+        response.headers.setdefault(
+            "Content-Security-Policy", _csp_for(request.url.path)
+        )
         return response
 
 
