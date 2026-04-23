@@ -17,6 +17,7 @@ from quantforge.api.metrics import PrometheusMiddleware, metrics_endpoint
 from quantforge.api.routes import backtest as backtest_route
 from quantforge.api.routes import market as market_route
 from quantforge.api.routes import ml as ml_route
+from quantforge.api.routes import jobs as jobs_route
 from quantforge.api.routes import options as options_route
 from quantforge.api.routes import portfolio as portfolio_route
 from quantforge.api.routes import risk as risk_route
@@ -86,7 +87,8 @@ def create_app() -> FastAPI:
 
     # routers
     for r in (options_route.router, backtest_route.router, portfolio_route.router,
-               risk_route.router, ml_route.router, market_route.router):
+               risk_route.router, ml_route.router, market_route.router,
+               jobs_route.router):
         app.include_router(r)
 
     # Meta endpoints
