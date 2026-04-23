@@ -21,6 +21,7 @@ from quantforge.api.routes import jobs as jobs_route
 from quantforge.api.routes import options as options_route
 from quantforge.api.routes import portfolio as portfolio_route
 from quantforge.api.routes import risk as risk_route
+from quantforge.api.ws import router as ws_router
 from quantforge.api.schemas import HealthResponse, ReadinessResponse
 from quantforge.api.security import (
     MaxBodySizeMiddleware, RequestIDMiddleware, SecurityHeadersMiddleware,
@@ -88,7 +89,7 @@ def create_app() -> FastAPI:
     # routers
     for r in (options_route.router, backtest_route.router, portfolio_route.router,
                risk_route.router, ml_route.router, market_route.router,
-               jobs_route.router):
+               jobs_route.router, ws_router):
         app.include_router(r)
 
     # Meta endpoints
