@@ -18,6 +18,7 @@ from quantforge.api.routes import backtest as backtest_route
 from quantforge.api.routes import market as market_route
 from quantforge.api.routes import ml as ml_route
 from quantforge.api.routes import jobs as jobs_route
+from quantforge.api.routes import jwt_routes
 from quantforge.api.routes import options as options_route
 from quantforge.api.routes import portfolio as portfolio_route
 from quantforge.api.routes import risk as risk_route
@@ -89,7 +90,7 @@ def create_app() -> FastAPI:
     # routers
     for r in (options_route.router, backtest_route.router, portfolio_route.router,
                risk_route.router, ml_route.router, market_route.router,
-               jobs_route.router, ws_router):
+               jobs_route.router, ws_router, jwt_routes.router):
         app.include_router(r)
 
     # Meta endpoints
@@ -129,6 +130,13 @@ def create_app() -> FastAPI:
         logging.getLogger("quantforge.api").warning(
             "dev API key generated: %s (set QUANTFORGE_API_KEYS in prod)", dev_key,
         )
+
+    # OpenTelemetry tracing (no-op unless OTEL_EXPORTER_OTLP_ENDPOINT is set)
+    try:
+        from quantforge.api.tracing import configure_tracing
+        configure_tracing(app)
+    except Exception:
+        pass
 
     return app
 

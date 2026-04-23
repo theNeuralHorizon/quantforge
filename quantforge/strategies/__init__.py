@@ -13,6 +13,7 @@ from quantforge.strategies.cross_sectional_momentum import CrossSectionalMomentu
 from quantforge.strategies.dual_momentum import DualMomentum
 from quantforge.strategies.vol_target import VolTarget
 from quantforge.strategies.regime_switch import RegimeSwitch
+from quantforge.strategies.rl_ppo import PPOStrategy
 
 __all__ = [
     "Strategy",
@@ -30,4 +31,5 @@ __all__ = [
     "DualMomentum",
     "VolTarget",
     "RegimeSwitch",
+    "PPOStrategy",
 ]
