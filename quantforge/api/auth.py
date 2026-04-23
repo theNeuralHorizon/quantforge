@@ -84,3 +84,16 @@ def reset_keys() -> None:
     global _DEV_KEY
     _ALLOWED_HASHES.clear()
     _DEV_KEY = None
+
+
+def is_dev_mode() -> bool:
+    """True when running with an auto-generated dev key (no QUANTFORGE_API_KEYS).
+
+    Used by /v1/meta/dev-key to decide whether to expose the auto-key to the UI.
+    """
+    return bool(_DEV_KEY) and not os.environ.get(_ENV_KEYS, "").strip()
+
+
+def get_dev_key_if_dev_mode() -> Optional[str]:
+    """Return the dev key ONLY if we're in dev mode (never leak real keys)."""
+    return _DEV_KEY if is_dev_mode() else None

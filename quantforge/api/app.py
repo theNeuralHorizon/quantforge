@@ -126,6 +126,18 @@ def create_app() -> FastAPI:
     def _version():
         return {"version": __version__}
 
+    @app.get("/v1/meta/dev-key", include_in_schema=False)
+    def _dev_key():
+        """Auto-bootstrap the web UI. Returns the dev API key ONLY when the
+        server is running without QUANTFORGE_API_KEYS set (i.e. local dev).
+        Never exposes real keys in production.
+        """
+        from quantforge.api.auth import get_dev_key_if_dev_mode, is_dev_mode
+        return {
+            "dev_mode": is_dev_mode(),
+            "dev_key": get_dev_key_if_dev_mode(),  # None when prod
+        }
+
     # Serve the static web UI if it exists
     web_dir = os.path.join(os.path.dirname(__file__), "..", "..", "web")
     web_dir = os.path.abspath(web_dir)

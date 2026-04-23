@@ -154,6 +154,27 @@
       </h1>
       <p class="text-dim mt-3 max-w-2xl">Full-stack quant research — backtesting, options pricing, portfolio optimization, risk analytics, and machine learning — in one minimal-dep Python library with a hardened REST API.</p>
 
+      <!-- Bootstrap toast -->
+      <div x-show="keyBootstrapped" x-transition
+           class="card p-3 mt-4 border-cyan text-cyan text-sm"
+           style="border-color: rgba(0, 217, 255, 0.4); background: rgba(0, 217, 255, 0.05);">
+        <span class="pulse-dot bg-cyan mr-2"></span>
+        Auto-configured with the server's dev API key.
+        Your key is persisted to localStorage under <code>qf_api_key</code>.
+      </div>
+
+      <!-- Error banner -->
+      <div x-show="overviewError" x-transition
+           class="card p-4 mt-4 text-red"
+           style="border-color: rgba(255, 78, 107, 0.4); background: rgba(255, 78, 107, 0.08);">
+        <div class="font-semibold">⚠ Cannot load market data</div>
+        <div class="text-sm mt-1" x-text="overviewError"></div>
+        <div class="text-xs mt-2 text-dim">
+          Open the <strong>API key</strong> panel in the sidebar footer and paste your key,
+          then click <button class="underline" @click="loadOverview()">Retry</button>.
+        </div>
+      </div>
+
       <!-- KPI cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
         <template x-for="k in overviewKpis" :key="k.label">
@@ -600,6 +621,10 @@ function qf() {
     alerts: { status: 'disconnected', events: [], _ws: null },
     live:   { status: 'disconnected', events: [], count: 0, last: null, _ws: null },
 
+    // Bootstrap + error UX
+    keyBootstrapped: false,   // true = auto-fetched from /v1/meta/dev-key
+    overviewError: null,      // surfaced when Overview KPIs fail to load
+
     // helpers
     fmt(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return (+v).toFixed(d); },
     pct(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return ((+v)*100).toFixed(d)+'%'; },
@@ -631,6 +656,20 @@ function qf() {
         this.apiStatus = h.status;
         this.apiVersion = h.version;
       } catch (e) { this.apiStatus = 'unhealthy'; }
+
+      // First-visit bootstrap: if the API is in dev mode and we don't have
+      // a key yet, pull the auto-generated one so the dashboard Just Works.
+      if (!this.apiKey) {
+        try {
+          const meta = await (await fetch('/v1/meta/dev-key')).json();
+          if (meta && meta.dev_mode && meta.dev_key) {
+            this.apiKey = meta.dev_key;
+            this.saveApiKey();
+            this.keyBootstrapped = true;
+          }
+        } catch (_) { /* no dev-key endpoint; stay unauth */ }
+      }
+
       this.loadOverview();
       // render on tab change
       this.$watch('active', () => { this.$nextTick(() => this.renderCharts()); });
@@ -744,7 +783,12 @@ function qf() {
     },
 
     async loadOverview() {
+      this.overviewError = null;
       const tickers = ['SPY', 'QQQ', 'IWM', 'TLT', 'GLD'];
+      if (!this.apiKey) {
+        this.overviewError = "No API key set. Click the 'API key' section in the sidebar to enter one.";
+        return;
+      }
       try {
         const series = await Promise.all(tickers.map(async t => {
           const r = await this.api(`/v1/market/data/${t}?start=2015-01-01&end=2025-01-01&sample=400`);
@@ -773,6 +817,7 @@ function qf() {
         this.overviewKpis[2].trend = '2020 COVID'; this.overviewKpis[2].trendColor = 'text-dim';
       } catch (e) {
         console.error(e);
+        this.overviewError = 'Could not load market data: ' + (e.message || e);
       }
     },
 
