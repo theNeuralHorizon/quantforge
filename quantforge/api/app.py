@@ -22,6 +22,10 @@ from quantforge.api.routes import jwt_routes
 from quantforge.api.routes import options as options_route
 from quantforge.api.routes import portfolio as portfolio_route
 from quantforge.api.routes import risk as risk_route
+from quantforge.api.routes import alerts_routes
+from quantforge.api.routes import audit_routes
+from quantforge.api.routes import backtest_extra
+from quantforge.api.audit import AuditMiddleware
 from quantforge.api.ws import router as ws_router
 from quantforge.api.schemas import HealthResponse, ReadinessResponse
 from quantforge.api.security import (
@@ -90,8 +94,13 @@ def create_app() -> FastAPI:
     # routers
     for r in (options_route.router, backtest_route.router, portfolio_route.router,
                risk_route.router, ml_route.router, market_route.router,
-               jobs_route.router, ws_router, jwt_routes.router):
+               jobs_route.router, ws_router, jwt_routes.router,
+               alerts_routes.router, audit_routes.router, backtest_extra.router):
         app.include_router(r)
+
+    # Audit every authenticated call. Opt-out via QUANTFORGE_AUDIT_DISABLE=1.
+    if os.environ.get("QUANTFORGE_AUDIT_DISABLE", "").lower() not in ("1", "true", "yes"):
+        app.add_middleware(AuditMiddleware)
 
     # Meta endpoints
     @app.get("/", include_in_schema=False)
