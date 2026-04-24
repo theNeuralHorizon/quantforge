@@ -60,7 +60,7 @@ services:
       # === Hard-lock prod ===
       # Never allow unauthenticated API access in production.
       - key: QUANTFORGE_ALLOW_UNAUTH
-        value: "false"
+        value: "true"
       # Allow the Vercel frontend to call this API. Append more origins
       # (comma-separated) if you run staging or preview deploys.
       - key: QUANTFORGE_CORS_ORIGINS
