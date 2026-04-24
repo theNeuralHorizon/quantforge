@@ -17,7 +17,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
-    plan: starter                 # $7/mo, always-on. Use `free` for hobby (sleeps after 15m idle).
+    plan: free                 # changed from starter to free
     region: oregon                # pick the closest region; `oregon`|`frankfurt`|`singapore`|`ohio`|`virginia`
     branch: main
     autoDeploy: true              # redeploy on push to `branch` above
@@ -31,10 +31,10 @@ services:
         --log-level info --proxy-headers --forwarded-allow-ips=*"
     # A 10 GB persistent disk keeps the SQLite audit log + yfinance cache
     # across deploys. Without this, audit history resets on every redeploy.
-    disk:
-      name: quantforge-data
-      mountPath: /app/data
-      sizeGB: 10
+    # disk:
+    #   name: quantforge-data
+    #   mountPath: /app/data
+    #   sizeGB: 10
     envVars:
       # === Python runtime ===
       - key: PYTHONUNBUFFERED
