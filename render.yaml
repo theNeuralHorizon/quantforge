@@ -25,10 +25,7 @@ services:
     # The Dockerfile exposes 8000; Render injects $PORT. Uvicorn reads it via
     # `--port ${PORT:-8000}` if we wrap CMD. Override here so Render's $PORT
     # takes precedence without editing the Dockerfile.
-    dockerCommand: >-
-      sh -c "python -m uvicorn quantforge.api.app:app
-      --host 0.0.0.0 --port ${PORT:-8000} --workers 2
-      --log-level info --proxy-headers --forwarded-allow-ips=*"
+    dockerCommand: python -m uvicorn quantforge.api.app:app --host 0.0.0.0 --port $PORT --workers 2 --log-level info --proxy-headers --forwarded-allow-ips="*"
     # A 10 GB persistent disk keeps the SQLite audit log + yfinance cache
     # across deploys. Without this, audit history resets on every redeploy.
     # disk:
