@@ -21,7 +21,7 @@ RUN groupadd -r qf && useradd -r -g qf -u 10001 -d /app -s /usr/sbin/nologin qf
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app \
+    PYTHONPATH=/app:/install/lib/python3.12/site-packages \
     PATH="/install/bin:$PATH" \
     QUANTFORGE_LOG_LEVEL=INFO
 
