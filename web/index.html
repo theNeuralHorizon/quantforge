@@ -183,13 +183,7 @@
         <span x-text="apiStatus === 'ok' ? 'Connected' : apiStatus"></span>
       </div>
       <div class="text-[11px] text-dim mt-1 num" x-text="apiVersion ? 'v'+apiVersion : '—'"></div>
-      <div class="mt-3">
-        <details>
-          <summary class="text-[11px] uppercase tracking-widest text-dim cursor-pointer hover:text-cyan">API key</summary>
-          <input class="input mt-2 w-full text-xs num" type="password" placeholder="X-API-Key"
-                 x-model="apiKey" @change="saveApiKey()" />
-        </details>
-      </div>
+      <!-- API key hidden for demo - auto-configured -->
     </div>
   </aside>
 
@@ -776,7 +770,7 @@ function qf() {
   return {
     // state
     active: localStorage.getItem('qf_active') || 'overview',
-    apiKey: localStorage.getItem('qf_api_key') || '',
+    apiKey: localStorage.getItem('qf_api_key') || '34b74e62b7569ad8d33dc0ed7d619c57',
     apiStatus: 'connecting',
     apiVersion: null,
     nav: [
