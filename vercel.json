@@ -1,0 +1,42 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "buildCommand": null,
+  "outputDirectory": "web",
+  "framework": null,
+  "installCommand": null,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/",             "destination": "/index.html" },
+    { "source": "/ui",           "destination": "/index.html" },
+    { "source": "/ui/(.*)",      "destination": "/index.html" },
+
+    { "source": "/healthz",       "destination": "https://quantforge-api.onrender.com/healthz" },
+    { "source": "/readyz",        "destination": "https://quantforge-api.onrender.com/readyz" },
+    { "source": "/metrics",       "destination": "https://quantforge-api.onrender.com/metrics" },
+    { "source": "/openapi.json",  "destination": "https://quantforge-api.onrender.com/openapi.json" },
+    { "source": "/docs",          "destination": "https://quantforge-api.onrender.com/docs" },
+    { "source": "/docs/(.*)",     "destination": "https://quantforge-api.onrender.com/docs/$1" },
+    { "source": "/redoc",         "destination": "https://quantforge-api.onrender.com/redoc" },
+    { "source": "/v1/(.*)",       "destination": "https://quantforge-api.onrender.com/v1/$1" },
+    { "source": "/ws/(.*)",       "destination": "https://quantforge-api.onrender.com/ws/$1" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options",        "value": "DENY" },
+        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy",     "value": "camera=(), microphone=(), geolocation=(), payment=()" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    }
+  ]
+}

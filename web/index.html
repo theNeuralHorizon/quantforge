@@ -6,6 +6,13 @@
   <title>QuantForge Terminal</title>
   <meta name="description" content="Quant research terminal: backtests, options pricing, portfolio optimization, risk analytics, ML." />
 
+  <!-- Deployment override: when the static UI is served by Vercel and the
+       API lives on Render (or any other host), set this to the bare host
+       (no scheme, no path) of the API — e.g. `quantforge-api.onrender.com`.
+       Leave empty for same-origin deploys (local dev or Docker). The UI
+       falls back to `location.host` when empty. -->
+  <meta name="qf-api-host" content="" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -1065,7 +1072,12 @@ function qf() {
     _openWs(topic, onEvent) {
       const key = encodeURIComponent(this.apiKey || '');
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      const host  = location.host || 'localhost:8000';
+      // Vercel rewrites don't proxy WebSocket upgrades, so the UI connects
+      // straight to the API host when `qf-api-host` is provided. For
+      // same-origin deploys (local dev, Docker) the meta is empty and we
+      // fall back to location.host.
+      const override = (document.querySelector('meta[name="qf-api-host"]') || {}).content || '';
+      const host = override || location.host || 'localhost:8000';
       const url   = `${proto}://${host}/ws/events?topic=${encodeURIComponent(topic)}&api_key=${key}`;
       try {
         const ws = new WebSocket(url);

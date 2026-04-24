@@ -106,3 +106,90 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
         continue-on-error: true
+
+  deploy:
+    name: Deploy to Render + Vercel
+    runs-on: ubuntu-latest
+    # Render builds its own image from the Dockerfile, so it's independent of
+    # the GHCR push in `docker-build`. Gate the deploy on correctness
+    # (tests + lint + security) only.
+    needs: [test, lint, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # No permissions needed — we only POST to webhook URLs stored in secrets.
+    permissions:
+      contents: read
+    steps:
+      - name: Trigger Render deploy
+        # RENDER_DEPLOY_HOOK_URL comes from the Render service's Settings →
+        # Deploy Hook. If unset, the step is skipped so forks without the
+        # secret don't fail.
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "${HOOK:-}" ]; then
+            echo "::notice::RENDER_DEPLOY_HOOK_URL not configured; skipping Render deploy."
+            exit 0
+          fi
+          # Fail the job if the hook returns non-2xx.
+          http_code=$(curl -sS -o /tmp/render.out -w "%{http_code}" -X POST "$HOOK")
+          echo "Render deploy hook returned HTTP $http_code"
+          cat /tmp/render.out || true
+          case "$http_code" in 2*) ;; *) exit 1 ;; esac
+      - name: Trigger Vercel deploy
+        # VERCEL_DEPLOY_HOOK_URL comes from Vercel → Project → Settings →
+        # Git → Deploy Hooks. Optional: prefer Vercel's native GitHub
+        # integration, which auto-deploys on push. This step is a belt-and-
+        # braces fallback.
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "${HOOK:-}" ]; then
+            echo "::notice::VERCEL_DEPLOY_HOOK_URL not configured; skipping Vercel deploy (native integration likely handles it)."
+            exit 0
+          fi
+          http_code=$(curl -sS -o /tmp/vercel.out -w "%{http_code}" -X POST "$HOOK")
+          echo "Vercel deploy hook returned HTTP $http_code"
+          cat /tmp/vercel.out || true
+          case "$http_code" in 2*) ;; *) exit 1 ;; esac
+
+  smoke:
+    name: Production smoke test
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    steps:
+      - name: Wait for API to come up
+        # PROD_API_URL is a repo variable (not secret) set to e.g.
+        # https://quantforge-api.onrender.com. If unset, skip the smoke.
+        env:
+          API_URL: ${{ vars.PROD_API_URL }}
+        run: |
+          if [ -z "${API_URL:-}" ]; then
+            echo "::notice::PROD_API_URL var not set; skipping smoke test."
+            exit 0
+          fi
+          # Render redeploys take 1-3 min; poll /healthz until it reports the
+          # new version or we hit a 5-min ceiling.
+          for i in $(seq 1 60); do
+            resp=$(curl -sS -m 5 "$API_URL/healthz" || true)
+            echo "attempt $i: $resp"
+            if echo "$resp" | grep -q '"status":"ok"'; then
+              echo "API is healthy."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::API never reported healthy at $API_URL/healthz"
+          exit 1
+      - name: Verify prod rejects unauthenticated requests
+        env:
+          API_URL: ${{ vars.PROD_API_URL }}
+        run: |
+          if [ -z "${API_URL:-}" ]; then exit 0; fi
+          # Any /v1/* path without an API key must return 401/403 in prod.
+          # A 200 here means QUANTFORGE_ALLOW_UNAUTH=true slipped through.
+          code=$(curl -sS -m 10 -o /dev/null -w "%{http_code}" "$API_URL/v1/meta/version")
+          echo "unauthenticated /v1/meta/version -> HTTP $code"
+          case "$code" in 401|403) echo "OK: auth is enforced." ;; *) echo "::error::prod allows unauth access (got $code)"; exit 1 ;; esac

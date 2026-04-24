@@ -1,0 +1,28 @@
+# Vercel only hosts the static UI in /web — exclude everything else to keep
+# the deploy artifact small and the surface area minimal.
+quantforge/
+quantforge_client/
+tests/
+examples/
+k8s/
+n8n/
+observability/
+docs/
+data/
+scripts/
+*.py
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.streamlit/
+Dockerfile
+Dockerfile.dashboard
+docker-compose*.yml
+requirements.txt
+pyproject.toml
+.env
+.env.*
+!.env.example
+.claude/

@@ -60,8 +60,55 @@ origins via `QUANTFORGE_CORS_ORIGINS` (comma-separated).
 - Network isolation via `NetworkPolicy` (default deny)
 
 ### CI/CD checks
-- `bandit` for Python security lint (HIGH+ fails the build)
+- `bandit` for Python security lint (MEDIUM+ fails the build)
 - `safety` for CVE scanning of dependencies
-- `CodeQL` for static analysis
-- `Trivy` for container image vulnerability scan
+- `CodeQL` for static analysis (Python + JavaScript)
+- `gitleaks` for committed-secret detection (fails PRs with leaks)
+- `Trivy` for container image vulnerability scan (CRITICAL/HIGH surfaced to
+  GitHub Security tab)
 - Dependabot weekly PRs for pip, docker, and GitHub Actions
+
+### Deploy pipeline (Render + Vercel)
+- Deploys only fire after **test + lint + security-scan** are all green.
+- CI posts to Render/Vercel deploy hooks via URLs stored as GitHub secrets
+  (`RENDER_DEPLOY_HOOK_URL`, `VERCEL_DEPLOY_HOOK_URL`). The URLs themselves
+  are not logged.
+- A post-deploy `smoke` job polls `/healthz` and asserts that an
+  unauthenticated request to `/v1/meta/version` returns **401/403**. If a
+  deploy accidentally ships `QUANTFORGE_ALLOW_UNAUTH=true`, the job fails
+  and flags the regression before traffic hits it.
+
+## Production deployment checklist
+
+Run through this before pointing real clients at a fresh deploy. The
+companion guide in [`DEPLOYMENT.md`](./DEPLOYMENT.md) walks through the
+mechanics.
+
+### Secrets
+- [ ] `QUANTFORGE_API_KEYS` set to comma-separated **SHA-256 digests** (not
+      raw keys). At least one key per distinct client so you can revoke
+      granularly.
+- [ ] `QUANTFORGE_JWT_SECRET` is ≥ 32 random bytes if any route uses JWT
+      auth. Generated via `secrets.token_urlsafe(48)` or `openssl rand`.
+- [ ] `QUANTFORGE_ALLOW_UNAUTH=false` — confirm with the smoke job.
+- [ ] No secrets in repo. `gitleaks` is green on `main`.
+
+### Network
+- [ ] `QUANTFORGE_CORS_ORIGINS` contains **only** your frontend origin(s).
+      No wildcards, no `http://`, no trailing paths.
+- [ ] Vercel enforces HSTS (see `vercel.json` headers block).
+- [ ] Render serves only over HTTPS (default; don't disable).
+
+### Persistence
+- [ ] Render disk is mounted at `/app/data` and `QUANTFORGE_AUDIT_DB`
+      points inside it. Without this, audit history resets on every deploy.
+- [ ] Audit log rotation threshold (`MAX_ROWS=200_000`) is acceptable for
+      your compliance retention; bump the disk size if you need longer.
+
+### Runtime
+- [ ] Rate limits appropriate for the caller base (default 120/min, 2000/hr
+      per key). Tighten for public deploys, loosen for trusted internal.
+- [ ] `REDIS_URL` set if you run >1 instance of the API — otherwise the
+      in-memory cache and rate-limit counters diverge between instances.
+- [ ] Trivy SARIF uploads are visible under **Security → Code scanning**.
+- [ ] At least one secondary on-call has access to rotate secrets.

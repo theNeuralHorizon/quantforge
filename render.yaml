@@ -1,0 +1,115 @@
+# Render Blueprint — spins up the QuantForge API from this repo.
+#
+# Usage (one-time setup):
+#   1. Push this file to the repo's default branch.
+#   2. In Render dashboard: New → Blueprint → connect this GitHub repo.
+#   3. Render reads this file and provisions the service below.
+#   4. Fill in every env var marked `sync: false` in the Render dashboard.
+#   5. (Optional) Set up a Deploy Hook URL under the service's Settings → Deploy
+#      Hook. Paste that URL into the GitHub secret RENDER_DEPLOY_HOOK_URL so
+#      CI re-deploys automatically on green main.
+#
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: quantforge-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter                 # $7/mo, always-on. Use `free` for hobby (sleeps after 15m idle).
+    region: oregon                # pick the closest region; `oregon`|`frankfurt`|`singapore`|`ohio`|`virginia`
+    branch: main
+    autoDeploy: true              # redeploy on push to `branch` above
+    healthCheckPath: /healthz
+    # The Dockerfile exposes 8000; Render injects $PORT. Uvicorn reads it via
+    # `--port ${PORT:-8000}` if we wrap CMD. Override here so Render's $PORT
+    # takes precedence without editing the Dockerfile.
+    dockerCommand: >-
+      sh -c "python -m uvicorn quantforge.api.app:app
+        --host 0.0.0.0 --port ${PORT:-8000} --workers 2
+        --log-level info --proxy-headers --forwarded-allow-ips=*"
+    # A 10 GB persistent disk keeps the SQLite audit log + yfinance cache
+    # across deploys. Without this, audit history resets on every redeploy.
+    disk:
+      name: quantforge-data
+      mountPath: /app/data
+      sizeGB: 10
+    envVars:
+      # === Python runtime ===
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONPATH
+        value: /app
+
+      # === Logging ===
+      - key: QUANTFORGE_LOG_LEVEL
+        value: INFO
+
+      # === Security — MUST be set via dashboard (sync: false) ===
+      # Comma-separated SHA-256 hex digests of the raw API keys you hand out.
+      # Generate with: echo -n 'your-raw-key' | sha256sum | awk '{print $1}'
+      - key: QUANTFORGE_API_KEYS
+        sync: false
+      # HMAC secret for JWT — must be >= 32 random bytes.
+      # Generate with: python -c "import secrets; print(secrets.token_urlsafe(48))"
+      - key: QUANTFORGE_JWT_SECRET
+        sync: false
+      - key: QUANTFORGE_JWT_ISSUER
+        value: quantforge
+      - key: QUANTFORGE_JWT_AUDIENCE
+        value: quantforge-api
+
+      # === Hard-lock prod ===
+      # Never allow unauthenticated API access in production.
+      - key: QUANTFORGE_ALLOW_UNAUTH
+        value: "false"
+      # Allow the Vercel frontend to call this API. Append more origins
+      # (comma-separated) if you run staging or preview deploys.
+      - key: QUANTFORGE_CORS_ORIGINS
+        sync: false
+
+      # === Rate limiting ===
+      - key: QUANTFORGE_RATE_LIMIT_PER_MINUTE
+        value: "120"
+      - key: QUANTFORGE_RATE_LIMIT_PER_HOUR
+        value: "2000"
+      - key: QUANTFORGE_MAX_BODY_KB
+        value: "256"
+
+      # === Persistence paths (point at the mounted disk) ===
+      - key: QUANTFORGE_CACHE_DIR
+        value: /app/data/cache
+      - key: QUANTFORGE_AUDIT_DB
+        value: /app/data/audit.db
+
+      # === Job queue ===
+      - key: QUANTFORGE_JOB_MAX_WORKERS
+        value: "4"
+      - key: QUANTFORGE_JOB_MAX_QUEUED
+        value: "100"
+      - key: QUANTFORGE_JOB_PER_OWNER_INFLIGHT_CAP
+        value: "10"
+
+      # === Optional: connect a managed Redis for cache + rate-limit state ===
+      # Uncomment this block + the `databases:` section below once you attach
+      # a Redis instance in the dashboard.
+      # - key: REDIS_URL
+      #   fromService:
+      #     type: redis
+      #     name: quantforge-cache
+      #     property: connectionString
+
+      # === Optional: OpenTelemetry ===
+      # - key: OTEL_EXPORTER_OTLP_ENDPOINT
+      #   sync: false
+      # - key: OTEL_SERVICE_NAME
+      #   value: quantforge-api
+
+# Uncomment to provision a managed Redis instance alongside the service.
+# databases:
+#   - name: quantforge-cache
+#     type: redis
+#     plan: free           # 25 MB free, 256 MB on starter
+#     region: oregon
+#     ipAllowList: []       # empty → only reachable from services in the same region
