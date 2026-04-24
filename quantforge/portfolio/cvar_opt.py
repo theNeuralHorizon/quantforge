@@ -5,8 +5,6 @@ We use the classic scenario-based LP via SciPy's linprog.
 """
 from __future__ import annotations
 
-from typing import Optional, Tuple
-
 import numpy as np
 from scipy.optimize import linprog
 
@@ -14,9 +12,9 @@ from scipy.optimize import linprog
 def minimize_cvar(
     scenarios: np.ndarray,
     alpha: float = 0.95,
-    target_return: Optional[float] = None,
-    expected_returns: Optional[np.ndarray] = None,
-    bounds: Tuple[float, float] = (0.0, 1.0),
+    target_return: float | None = None,
+    expected_returns: np.ndarray | None = None,
+    bounds: tuple[float, float] = (0.0, 1.0),
 ) -> np.ndarray:
     """Return weights that minimize CVaR_alpha.
 

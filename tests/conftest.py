@@ -1,6 +1,6 @@
 """pytest configuration: add repo root to sys.path so 'import quantforge' works."""
-import sys
 import os
+import sys
 
 # Insert the repo root (parent of this tests/ directory) at the front of sys.path.
 # This is needed on Windows where the working directory may not be auto-added.

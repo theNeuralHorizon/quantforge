@@ -2,14 +2,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import numpy as np
 import pandas as pd
 
 from quantforge.core.event import SignalEvent
-from quantforge.indicators.technical import bollinger_bands
 from quantforge.indicators.statistical import rolling_zscore
+from quantforge.indicators.technical import bollinger_bands
 from quantforge.strategies.base import Strategy
 
 
@@ -25,7 +24,7 @@ class MeanReversionStrategy(Strategy):
     def warmup(self) -> int:
         return self.lookback + 1
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if len(history) < self.lookback + 1:
             return []
         z = rolling_zscore(history["close"], self.lookback).iloc[-1]
@@ -53,7 +52,7 @@ class BollingerMeanReversion(Strategy):
     def warmup(self) -> int:
         return self.window + 1
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if len(history) < self.window + 1:
             return []
         bb = bollinger_bands(history["close"], self.window, self.k).iloc[-1]

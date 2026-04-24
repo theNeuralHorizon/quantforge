@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -82,8 +81,7 @@ def garch11_forecast(
     sigma2 = _garch11_variance(r, params.omega, params.alpha, params.beta)
     last_sigma2 = sigma2[-1]
     last_r = r[-1]
-    persistence = params.alpha + params.beta
-    uv = params.unconditional_variance if params.unconditional_variance == params.unconditional_variance else last_sigma2
+    params.alpha + params.beta
 
     forecasts = np.empty(horizon)
     forecasts[0] = params.omega + params.alpha * last_r**2 + params.beta * last_sigma2

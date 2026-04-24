@@ -11,21 +11,23 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import List
 
 from quantforge.analytics.performance import summary_stats
 from quantforge.analytics.tearsheet import tearsheet_text
 from quantforge.backtest import BacktestEngine
 from quantforge.data.synthetic import generate_panel
-from quantforge.options.black_scholes import bs_call, bs_put, bs_implied_vol
-from quantforge.options.binomial import crr_price, crr_american
-from quantforge.options.monte_carlo import mc_european
+from quantforge.options.binomial import crr_american, crr_price
+from quantforge.options.black_scholes import bs_call, bs_implied_vol, bs_put
 from quantforge.options.greeks import all_greeks
+from quantforge.options.monte_carlo import mc_european
 from quantforge.strategies import (
-    BollingerMeanReversion, DonchianBreakout, FactorStrategy,
-    MACrossoverStrategy, MomentumStrategy, RSIReversalStrategy,
+    BollingerMeanReversion,
+    DonchianBreakout,
+    FactorStrategy,
+    MACrossoverStrategy,
+    MomentumStrategy,
+    RSIReversalStrategy,
 )
-
 
 _STRATEGY_MAP = {
     "momentum": MomentumStrategy,
@@ -45,7 +47,7 @@ def _make_strategy(name: str, kwargs: dict):
     return cls(**filtered)
 
 
-def _kv_args(lst: List[str]) -> dict:
+def _kv_args(lst: list[str]) -> dict:
     out = {}
     for item in lst:
         if "=" not in item:
@@ -141,6 +143,7 @@ def cmd_tournament(args) -> int:
 def _get_client(args):
     """Build a QuantForge SDK client from CLI flags + env."""
     import os
+
     from quantforge_client import QuantForge
     key = args.api_key or os.environ.get("QUANTFORGE_CLIENT_KEY")
     return QuantForge(args.api, api_key=key)
@@ -251,7 +254,7 @@ def cmd_ws_tail(args) -> int:
     return 0
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="quantforge", description="QuantForge CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
 

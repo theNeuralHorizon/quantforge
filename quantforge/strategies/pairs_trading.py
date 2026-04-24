@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
 
 from quantforge.core.event import SignalEvent
-from quantforge.indicators.statistical import rolling_zscore, rolling_beta
+from quantforge.indicators.statistical import rolling_beta, rolling_zscore
 from quantforge.strategies.base import Strategy
 
 
@@ -21,14 +20,14 @@ class PairsTradingStrategy(Strategy):
     entry_z: float = 2.0
     exit_z: float = 0.5
     name: str = "pairs"
-    _last_prices: Dict[str, float] = field(default_factory=dict)
-    _last_history: Dict[str, pd.DataFrame] = field(default_factory=dict)
+    _last_prices: dict[str, float] = field(default_factory=dict)
+    _last_history: dict[str, pd.DataFrame] = field(default_factory=dict)
     _pos_dir: int = 0
 
     def warmup(self) -> int:
         return self.window + 5
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         self._last_prices[symbol] = float(bar["close"])
         self._last_history[symbol] = history
         if self.asset_a not in self._last_prices or self.asset_b not in self._last_prices:

@@ -8,12 +8,12 @@ from __future__ import annotations
 import json
 import threading
 import time
-import traceback
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Optional
+from typing import Any
 
 from quantforge.api.cache import cache_backend
 
@@ -33,12 +33,12 @@ class Job:
     status: JobStatus = JobStatus.QUEUED
     progress: float = 0.0
     created_at: float = field(default_factory=time.time)
-    started_at: Optional[float] = None
-    completed_at: Optional[float] = None
+    started_at: float | None = None
+    completed_at: float | None = None
     result: Any = None
-    error: Optional[str] = None
-    params: Dict[str, Any] = field(default_factory=dict)
-    owner: Optional[str] = None
+    error: str | None = None
+    params: dict[str, Any] = field(default_factory=dict)
+    owner: str | None = None
     _cancel: threading.Event = field(default_factory=threading.Event, repr=False)
 
     def to_dict(self, include_result: bool = True) -> dict:
@@ -55,8 +55,8 @@ class Job:
 
 class JobManager:
     def __init__(self, max_workers: int = 4, max_queued: int = 100):
-        self._jobs: Dict[str, Job] = {}
-        self._owner_counts: Dict[str, int] = {}
+        self._jobs: dict[str, Job] = {}
+        self._owner_counts: dict[str, int] = {}
         self._lock = threading.Lock()
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         self._max_queued = max_queued
@@ -69,7 +69,7 @@ class JobManager:
         except Exception:
             pass
 
-    def _load(self, job_id: str) -> Optional[dict]:
+    def _load(self, job_id: str) -> dict | None:
         cache = cache_backend()
         try:
             raw = cache.get(f"qf:job:{job_id}")
@@ -79,8 +79,8 @@ class JobManager:
             pass
         return None
 
-    def submit(self, kind: str, func: Callable[[Job], Any], params: Dict[str, Any],
-                owner: Optional[str] = None) -> Job:
+    def submit(self, kind: str, func: Callable[[Job], Any], params: dict[str, Any],
+                owner: str | None = None) -> Job:
         with self._lock:
             # Crude per-owner queue cap — anti-abuse
             if owner:
@@ -119,7 +119,7 @@ class JobManager:
         self._executor.submit(_wrapped)
         return job
 
-    def get(self, job_id: str) -> Optional[Job]:
+    def get(self, job_id: str) -> Job | None:
         with self._lock:
             job = self._jobs.get(job_id)
         if job is not None:
@@ -140,7 +140,7 @@ class JobManager:
             owner=d.get("owner"),
         )
 
-    def cancel(self, job_id: str, owner: Optional[str] = None) -> bool:
+    def cancel(self, job_id: str, owner: str | None = None) -> bool:
         with self._lock:
             job = self._jobs.get(job_id)
             if job is None:
@@ -176,7 +176,7 @@ class JobManager:
 
 
 # Singleton manager
-_manager: Optional[JobManager] = None
+_manager: JobManager | None = None
 
 
 def get_manager() -> JobManager:

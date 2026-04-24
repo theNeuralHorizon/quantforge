@@ -1,19 +1,30 @@
 """Tests for quantforge.indicators (technical + statistical)."""
 import math
-import pytest
+
 import numpy as np
 import pandas as pd
+import pytest
 
-from quantforge.indicators.technical import (
-    sma, ema, rsi, bollinger_bands, atr, true_range,
-    macd, stochastic, obv, vwap, donchian_channel, keltner_channel,
-    cci, williams_r,
-)
+from quantforge.data.synthetic import generate_ohlcv
 from quantforge.indicators.statistical import (
-    rolling_zscore, realized_vol, ewma_vol, hurst_exponent, half_life,
+    hurst_exponent,
+    realized_vol,
+    rolling_zscore,
 )
-from quantforge.data.synthetic import generate_ohlcv, generate_gbm
-
+from quantforge.indicators.technical import (
+    atr,
+    bollinger_bands,
+    cci,
+    donchian_channel,
+    ema,
+    macd,
+    obv,
+    rsi,
+    sma,
+    stochastic,
+    true_range,
+    williams_r,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures

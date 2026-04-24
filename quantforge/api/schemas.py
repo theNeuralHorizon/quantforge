@@ -1,7 +1,7 @@
 """Pydantic request/response models — strict input validation for every endpoint."""
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -19,7 +19,7 @@ class OptionsPriceRequest(BaseModel):
     q: float = Field(0.0, ge=0, le=0.5, description="Dividend yield")
     steps: int = Field(500, ge=10, le=5000, description="CRR steps")
     n_paths: int = Field(50_000, ge=1_000, le=500_000, description="MC paths")
-    seed: Optional[int] = Field(42, ge=0, le=2**31 - 1)
+    seed: int | None = Field(42, ge=0, le=2**31 - 1)
 
 
 class OptionsPriceResponse(BaseModel):
@@ -28,7 +28,7 @@ class OptionsPriceResponse(BaseModel):
     crr_american: float
     monte_carlo: float
     monte_carlo_stderr: float
-    greeks: Dict[str, float]
+    greeks: dict[str, float]
 
 
 class ImpliedVolRequest(BaseModel):
@@ -54,8 +54,8 @@ class BacktestRequest(BaseModel):
         "rsi_reversal", "factor", "cross_sec_momentum", "dual_momentum",
         "regime_switch", "vol_target_momentum", "buy_and_hold",
     ] = Field(..., description="Strategy name")
-    params: Dict[str, Any] = Field(default_factory=dict)
-    tickers: List[str] = Field(default_factory=lambda: ["SPY", "QQQ", "IWM", "TLT", "GLD"],
+    params: dict[str, Any] = Field(default_factory=dict)
+    tickers: list[str] = Field(default_factory=lambda: ["SPY", "QQQ", "IWM", "TLT", "GLD"],
                                  min_length=1, max_length=20)
     start: str = Field("2015-01-01")
     end: str = Field("2025-01-01")
@@ -65,7 +65,7 @@ class BacktestRequest(BaseModel):
 
     @field_validator("tickers")
     @classmethod
-    def _uppercase_tickers(cls, v: List[str]) -> List[str]:
+    def _uppercase_tickers(cls, v: list[str]) -> list[str]:
         cleaned = []
         for t in v:
             t = t.strip().upper()
@@ -80,15 +80,15 @@ class BacktestResponse(BaseModel):
     n_bars: int
     n_trades: int
     final_equity: float
-    summary_stats: Dict[str, float]
-    equity_curve_sample: Dict[str, float]  # date -> equity (sampled for bandwidth)
+    summary_stats: dict[str, float]
+    equity_curve_sample: dict[str, float]  # date -> equity (sampled for bandwidth)
 
 
 # =============================================================================
 # Portfolio
 # =============================================================================
 class PortfolioOptimizeRequest(BaseModel):
-    tickers: List[str] = Field(..., min_length=2, max_length=20)
+    tickers: list[str] = Field(..., min_length=2, max_length=20)
     start: str = Field("2015-01-01")
     end: str = Field("2025-01-01")
     objective: Literal["max_sharpe", "min_variance", "erc", "hrp"] = "max_sharpe"
@@ -96,7 +96,7 @@ class PortfolioOptimizeRequest(BaseModel):
 
     @field_validator("tickers")
     @classmethod
-    def _up(cls, v: List[str]) -> List[str]:
+    def _up(cls, v: list[str]) -> list[str]:
         out = [t.strip().upper() for t in v]
         for t in out:
             if not t.replace("-", "").replace(".", "").isalnum() or len(t) > 10:
@@ -105,7 +105,7 @@ class PortfolioOptimizeRequest(BaseModel):
 
 
 class PortfolioOptimizeResponse(BaseModel):
-    weights: Dict[str, float]
+    weights: dict[str, float]
     expected_return: float
     expected_vol: float
     expected_sharpe: float
@@ -115,7 +115,7 @@ class PortfolioOptimizeResponse(BaseModel):
 # Risk
 # =============================================================================
 class VaRRequest(BaseModel):
-    returns: List[float] = Field(..., min_length=20, max_length=100_000)
+    returns: list[float] = Field(..., min_length=20, max_length=100_000)
     confidence: float = Field(0.95, gt=0.5, lt=1.0)
     method: Literal["historical", "parametric", "cornish_fisher", "monte_carlo"] = "historical"
 
@@ -155,7 +155,7 @@ class MLTrainResponse(BaseModel):
     val_auc: float
     test_auc: float
     baseline_acc: float
-    top_features: Dict[str, float]
+    top_features: dict[str, float]
     n_train: int
     n_val: int
     n_test: int
@@ -170,8 +170,8 @@ class MarketDataResponse(BaseModel):
     start_date: str
     end_date: str
     last_close: float
-    ytd_return: Optional[float] = None
-    bars: List[Dict[str, Any]] = Field(default_factory=list)
+    ytd_return: float | None = None
+    bars: list[dict[str, Any]] = Field(default_factory=list)
 
 
 # =============================================================================
@@ -185,10 +185,10 @@ class HealthResponse(BaseModel):
 
 class ReadinessResponse(BaseModel):
     status: Literal["ready", "not_ready"]
-    checks: Dict[str, bool]
+    checks: dict[str, bool]
 
 
 class ErrorResponse(BaseModel):
     error: str
-    detail: Optional[str] = None
-    request_id: Optional[str] = None
+    detail: str | None = None
+    request_id: str | None = None

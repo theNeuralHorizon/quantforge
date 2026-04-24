@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -15,7 +14,7 @@ def _align(a: pd.Series, b: pd.Series) -> tuple[pd.Series, pd.Series]:
     return df["a"], df["b"]
 
 
-def alpha_beta(strategy_returns: pd.Series, benchmark_returns: pd.Series, risk_free: float = 0.0, periods: int = TRADING_DAYS_YEAR) -> Dict[str, float]:
+def alpha_beta(strategy_returns: pd.Series, benchmark_returns: pd.Series, risk_free: float = 0.0, periods: int = TRADING_DAYS_YEAR) -> dict[str, float]:
     """CAPM regression: r_s = alpha + beta * r_b + eps (daily, then alpha annualized)."""
     s, b = _align(strategy_returns, benchmark_returns)
     if len(s) < 10:
@@ -57,7 +56,7 @@ def information_ratio(strategy_returns: pd.Series, benchmark_returns: pd.Series,
     return float(np.sqrt(periods) * diff.mean() / sd)
 
 
-def up_down_capture(strategy_returns: pd.Series, benchmark_returns: pd.Series) -> Dict[str, float]:
+def up_down_capture(strategy_returns: pd.Series, benchmark_returns: pd.Series) -> dict[str, float]:
     s, b = _align(strategy_returns, benchmark_returns)
     up = b > 0
     down = b < 0

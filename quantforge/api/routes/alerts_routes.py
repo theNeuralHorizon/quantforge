@@ -1,20 +1,20 @@
 """/v1/alerts — expose the alert engine over REST."""
 from __future__ import annotations
 
-from typing import Callable, Dict, List, Literal, Optional
+from collections.abc import Callable
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from quantforge.alerts import AlertEngine
-from quantforge.alerts.rules import AlertRule, Severity, ThresholdRule
+from quantforge.alerts.rules import Severity, ThresholdRule
 from quantforge.api.auth import verify_api_key
-
 
 router = APIRouter(prefix="/v1/alerts", tags=["alerts"])
 
 
-_ALLOWED_METRICS: Dict[str, Callable[[Dict], float]] = {
+_ALLOWED_METRICS: dict[str, Callable[[dict], float]] = {
     "drawdown":   lambda c: float(c["drawdown"]),
     "var":        lambda c: float(c["var"]),
     "vol":        lambda c: float(c["vol"]),
@@ -33,22 +33,22 @@ class RuleSpec(BaseModel):
     severity: Literal["info", "warning", "critical"] = "warning"
 
     @property
-    def metric_fn(self) -> Callable[[Dict], float]:
+    def metric_fn(self) -> Callable[[dict], float]:
         return _ALLOWED_METRICS[self.metric]
 
 
 class EvalRequest(BaseModel):
-    context: Dict[str, float] = Field(..., description="Metric values keyed by name")
+    context: dict[str, float] = Field(..., description="Metric values keyed by name")
 
 
 class EvalResponse(BaseModel):
-    fired: List[Dict]
+    fired: list[dict]
     n_rules: int
 
 
 # Singleton engine — in prod you'd scope to user/owner
-_engine: Optional[AlertEngine] = None
-_rule_specs: Dict[str, RuleSpec] = {}
+_engine: AlertEngine | None = None
+_rule_specs: dict[str, RuleSpec] = {}
 
 
 def _get_engine() -> AlertEngine:
@@ -66,12 +66,12 @@ def reset_for_tests() -> None:
 
 
 @router.get("/rules")
-def list_rules(_owner: str = Depends(verify_api_key)) -> List[Dict]:
+def list_rules(_owner: str = Depends(verify_api_key)) -> list[dict]:
     return [s.model_dump() for s in _rule_specs.values()]
 
 
 @router.post("/rules", status_code=201)
-def create_rule(spec: RuleSpec, _owner: str = Depends(verify_api_key)) -> Dict:
+def create_rule(spec: RuleSpec, _owner: str = Depends(verify_api_key)) -> dict:
     if spec.metric not in _ALLOWED_METRICS:
         raise HTTPException(status_code=422, detail=f"metric must be one of {sorted(_ALLOWED_METRICS)}")
     if spec.name in _rule_specs:
@@ -89,7 +89,7 @@ def create_rule(spec: RuleSpec, _owner: str = Depends(verify_api_key)) -> Dict:
 
 
 @router.delete("/rules/{rule_name}")
-def delete_rule(rule_name: str, _owner: str = Depends(verify_api_key)) -> Dict:
+def delete_rule(rule_name: str, _owner: str = Depends(verify_api_key)) -> dict:
     if rule_name not in _rule_specs:
         raise HTTPException(status_code=404, detail="rule not found")
     eng = _get_engine()
@@ -109,7 +109,7 @@ def evaluate(req: EvalRequest, _owner: str = Depends(verify_api_key)) -> EvalRes
 
 
 @router.get("/events")
-def recent_events(limit: int = 50, _owner: str = Depends(verify_api_key)) -> List[Dict]:
+def recent_events(limit: int = 50, _owner: str = Depends(verify_api_key)) -> list[dict]:
     if limit < 1 or limit > 500:
         raise HTTPException(status_code=422, detail="limit must be in [1, 500]")
     return [e.to_dict() for e in _get_engine().recent(limit=limit)]

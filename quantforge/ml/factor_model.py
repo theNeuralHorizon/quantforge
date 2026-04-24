@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -11,10 +10,10 @@ import pandas as pd
 @dataclass
 class FactorRegression:
     alpha: float
-    betas: Dict[str, float]
+    betas: dict[str, float]
     r_squared: float
     residuals: pd.Series
-    t_stats: Dict[str, float]
+    t_stats: dict[str, float]
 
     def summary(self) -> str:
         rows = [f"alpha     : {self.alpha:+.4f}  (t = {self.t_stats.get('alpha', float('nan')):+.2f})"]
@@ -49,7 +48,7 @@ def factor_regression(returns: pd.Series, factors: pd.DataFrame) -> FactorRegres
     r2 = 1 - ss_res / ss_tot if ss_tot > 0 else np.nan
     return FactorRegression(
         alpha=float(coef[0]),
-        betas={name: float(c) for name, c in zip(factors.columns, coef[1:])},
+        betas={name: float(c) for name, c in zip(factors.columns, coef[1:], strict=False)},
         r_squared=float(r2),
         residuals=pd.Series(resid, index=data.index),
         t_stats=t_stats,

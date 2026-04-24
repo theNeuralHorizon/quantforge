@@ -7,7 +7,6 @@ average execution price, and slippage vs. arrival / VWAP benchmarks.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -99,7 +98,7 @@ def twap(ohlcv: pd.DataFrame, quantity: float, side: str = "buy") -> ExecutionRe
 
 
 def vwap(ohlcv: pd.DataFrame, quantity: float, side: str = "buy",
-          volume_curve: Optional[np.ndarray] = None) -> ExecutionReport:
+          volume_curve: np.ndarray | None = None) -> ExecutionReport:
     """Volume-Weighted Average Price: allocate proportional to bar volume.
 
     `volume_curve` lets the caller pass a historical intraday volume profile
@@ -122,7 +121,7 @@ def vwap(ohlcv: pd.DataFrame, quantity: float, side: str = "buy",
 
 
 def pov(ohlcv: pd.DataFrame, participation_rate: float, side: str = "buy",
-         max_quantity: Optional[float] = None) -> ExecutionReport:
+         max_quantity: float | None = None) -> ExecutionReport:
     """Percent-of-Volume (Participation) algo.
 
     Buys/sells `participation_rate` * bar volume on each bar until the
@@ -152,7 +151,7 @@ def implementation_shortfall(
     quantity: float,
     side: str = "buy",
     risk_aversion: float = 1e-6,
-    volatility: Optional[float] = None,
+    volatility: float | None = None,
     temporary_impact_coef: float = 1e-5,
     permanent_impact_coef: float = 1e-7,
 ) -> ExecutionReport:

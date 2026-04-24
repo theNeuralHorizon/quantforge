@@ -2,18 +2,16 @@
 from __future__ import annotations
 
 import math
-from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from quantforge.analytics.performance import summary_stats
 from quantforge.api.auth import verify_api_key
-from quantforge.api.jobs import JobStatus, get_manager
+from quantforge.api.jobs import get_manager
 from quantforge.api.routes.backtest import _STRATEGY_FACTORY, _sample_equity, _sanitize
 from quantforge.api.schemas import BacktestRequest, MLTrainRequest
-from quantforge.analytics.performance import summary_stats
 from quantforge.backtest import BacktestEngine
 from quantforge.data.loader import DataLoader
-
 
 router = APIRouter(prefix="/v1/jobs", tags=["jobs"])
 
@@ -23,7 +21,7 @@ def _run_backtest_job(job, params: dict):
     try:
         factory = _STRATEGY_FACTORY[req.strategy]
     except KeyError:
-        raise ValueError(f"unknown strategy: {req.strategy}")
+        raise ValueError(f"unknown strategy: {req.strategy}") from None
     strat = factory(req.params)
     if job._cancel.is_set():
         return None
@@ -54,6 +52,7 @@ def _run_backtest_job(job, params: dict):
 
 def _run_ml_train_job(job, params: dict):
     from sklearn.ensemble import GradientBoostingClassifier
+
     from quantforge.ml.features import build_feature_matrix, target_labels
     from quantforge.ml.trainer import train_classifier
 
@@ -101,7 +100,7 @@ def submit_backtest_job(req: BacktestRequest, owner: str = Depends(verify_api_ke
             params=req.model_dump(), owner=owner,
         )
     except RuntimeError as e:
-        raise HTTPException(status_code=429, detail=str(e))
+        raise HTTPException(status_code=429, detail=str(e)) from e
     return {"job_id": job.id, "status": job.status.value,
              "poll_url": f"/v1/jobs/{job.id}"}
 
@@ -116,7 +115,7 @@ def submit_ml_job(req: MLTrainRequest, owner: str = Depends(verify_api_key)):
             params=req.model_dump(), owner=owner,
         )
     except RuntimeError as e:
-        raise HTTPException(status_code=429, detail=str(e))
+        raise HTTPException(status_code=429, detail=str(e)) from e
     return {"job_id": job.id, "status": job.status.value,
              "poll_url": f"/v1/jobs/{job.id}"}
 
@@ -144,6 +143,6 @@ def cancel_job(job_id: str, owner: str = Depends(verify_api_key)):
 def list_jobs(
     limit: int = Query(50, ge=1, le=500),
     owner: str = Depends(verify_api_key),
-) -> List[dict]:
+) -> list[dict]:
     jobs = get_manager().list_by_owner(owner, limit=limit)
     return [j.to_dict(include_result=False) for j in jobs]

@@ -1,20 +1,27 @@
 """Tests for quantforge.risk: VaR, CVaR, drawdown, metrics."""
 import math
-import pytest
+
 import numpy as np
 import pandas as pd
+import pytest
 
-from quantforge.risk.var import (
-    historical_var, historical_cvar,
-    parametric_var, parametric_cvar,
-    cornish_fisher_var, monte_carlo_var,
-)
-from quantforge.risk.drawdown import drawdown_series, max_drawdown, drawdown_table
+from quantforge.risk.drawdown import drawdown_series, drawdown_table, max_drawdown
 from quantforge.risk.metrics import (
-    sharpe_ratio, sortino_ratio, calmar_ratio,
-    omega_ratio, tail_ratio, ulcer_index,
+    calmar_ratio,
+    omega_ratio,
+    sharpe_ratio,
+    sortino_ratio,
+    tail_ratio,
+    ulcer_index,
 )
-
+from quantforge.risk.var import (
+    cornish_fisher_var,
+    historical_cvar,
+    historical_var,
+    monte_carlo_var,
+    parametric_cvar,
+    parametric_var,
+)
 
 # ---------------------------------------------------------------------------
 # Fixtures

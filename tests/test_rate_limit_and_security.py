@@ -19,12 +19,12 @@ def limited_app(monkeypatch):
     app = FastAPI()
 
     # Attach slowapi with a 3 req/second limit
+    from fastapi import Request
+    from fastapi.responses import JSONResponse
     from slowapi import Limiter
     from slowapi.errors import RateLimitExceeded
     from slowapi.middleware import SlowAPIMiddleware
     from slowapi.util import get_remote_address
-    from fastapi.responses import JSONResponse
-    from fastapi import Request
 
     def _key(request: Request) -> str:
         return request.headers.get("X-API-Key", get_remote_address(request))
@@ -44,7 +44,9 @@ def limited_app(monkeypatch):
         return {"pong": True}
 
     from quantforge.api.security import (
-        MaxBodySizeMiddleware, RequestIDMiddleware, SecurityHeadersMiddleware,
+        MaxBodySizeMiddleware,
+        RequestIDMiddleware,
+        SecurityHeadersMiddleware,
     )
     app.add_middleware(MaxBodySizeMiddleware, max_bytes=128)
     app.add_middleware(RequestIDMiddleware)

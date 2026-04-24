@@ -1,10 +1,9 @@
 """Portfolio aggregates positions, tracks cash and equity."""
 from __future__ import annotations
 
-from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Mapping, Tuple
 
 from quantforge.core.position import Position
 
@@ -13,8 +12,8 @@ from quantforge.core.position import Position
 class Portfolio:
     initial_capital: float = 100_000.0
     cash: float = field(init=False)
-    positions: Dict[str, Position] = field(default_factory=dict)
-    equity_curve: List[Tuple[datetime, float]] = field(default_factory=list)
+    positions: dict[str, Position] = field(default_factory=dict)
+    equity_curve: list[tuple[datetime, float]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.cash = self.initial_capital
@@ -58,7 +57,7 @@ class Portfolio:
     def record_equity(self, ts: datetime) -> None:
         self.equity_curve.append((ts, self.equity))
 
-    def weights(self) -> Dict[str, float]:
+    def weights(self) -> dict[str, float]:
         eq = self.equity
         if eq <= 0:
             return {}

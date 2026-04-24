@@ -3,11 +3,10 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from quantforge.ml.factor_model import factor_regression, simulate_fama_french_factors
-from quantforge.portfolio.cvar_opt import minimize_cvar, historical_cvar_from_scenarios
-from quantforge.risk.kelly import kelly_fraction, kelly_continuous, kelly_vector, fractional_kelly
+from quantforge.portfolio.cvar_opt import historical_cvar_from_scenarios, minimize_cvar
+from quantforge.risk.kelly import fractional_kelly, kelly_continuous, kelly_fraction, kelly_vector
 from quantforge.risk.simulation import simulate_portfolio, simulate_portfolio_returns
 
 

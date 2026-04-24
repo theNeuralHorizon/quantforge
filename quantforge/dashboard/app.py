@@ -20,16 +20,33 @@ from quantforge.analytics.performance import summary_stats
 from quantforge.analytics.tearsheet import tearsheet_markdown
 from quantforge.backtest import BacktestEngine
 from quantforge.dashboard.components import (
-    ACCENT, BG, BORDER, DANGER, MUTED, PAPER, PURPLE, SUCCESS, TEXT, TEXT_DIM, WARNING,
+    ACCENT,
+    BORDER,
+    DANGER,
     GLOBAL_CSS,
-    drawdown_chart, efficient_frontier_chart, equity_chart, greeks_gauge,
-    heatmap, horizontal_bar, iv_smile_chart, render_hero, render_pills,
-    returns_histogram, rolling_metric_chart, sparkline, weights_bar,
+    PAPER,
+    PURPLE,
+    SUCCESS,
+    TEXT,
+    TEXT_DIM,
+    WARNING,
+    drawdown_chart,
+    efficient_frontier_chart,
+    equity_chart,
+    greeks_gauge,
+    heatmap,
+    horizontal_bar,
+    iv_smile_chart,
+    render_hero,
+    render_pills,
+    returns_histogram,
+    rolling_metric_chart,
+    weights_bar,
 )
 from quantforge.data.loader import DataLoader
 from quantforge.data.synthetic import generate_correlated_returns, generate_ohlcv, generate_panel
-from quantforge.indicators.technical import atr, bollinger_bands, ema, macd, rsi
 from quantforge.indicators.statistical import realized_vol
+from quantforge.indicators.technical import atr, bollinger_bands, ema, macd, rsi
 from quantforge.options.binomial import crr_american, crr_price
 from quantforge.options.black_scholes import bs_call, bs_implied_vol, bs_put
 from quantforge.options.greeks import all_greeks
@@ -37,16 +54,26 @@ from quantforge.options.monte_carlo import mc_asian, mc_barrier, mc_european
 from quantforge.portfolio.hrp import hierarchical_risk_parity
 from quantforge.portfolio.markowitz import efficient_frontier, max_sharpe, min_variance
 from quantforge.portfolio.risk_parity import equal_risk_contribution
-from quantforge.risk.drawdown import drawdown_series, drawdown_table, max_drawdown
+from quantforge.risk.drawdown import drawdown_table, max_drawdown
 from quantforge.risk.var import (
-    cornish_fisher_var, historical_cvar, historical_var, parametric_var,
+    cornish_fisher_var,
+    historical_cvar,
+    historical_var,
+    parametric_var,
 )
 from quantforge.strategies import (
-    BollingerMeanReversion, BuyAndHoldStrategy, CrossSectionalMomentum,
-    DonchianBreakout, DualMomentum, FactorStrategy, MACrossoverStrategy,
-    MomentumStrategy, RegimeSwitch, RSIReversalStrategy, VolTarget,
+    BollingerMeanReversion,
+    BuyAndHoldStrategy,
+    CrossSectionalMomentum,
+    DonchianBreakout,
+    DualMomentum,
+    FactorStrategy,
+    MACrossoverStrategy,
+    MomentumStrategy,
+    RegimeSwitch,
+    RSIReversalStrategy,
+    VolTarget,
 )
-
 
 st.set_page_config(page_title="QuantForge", page_icon="⚡", layout="wide",
                     initial_sidebar_state="expanded")
@@ -283,7 +310,7 @@ def page_backtest() -> None:
             engine = BacktestEngine(strategy=strat, data=data, initial_capital=capital,
                                      sizing_fraction=sizing, rebalance=rebalance)
             res = engine.run()
-            bench_sym = list(data.keys())[0]
+            bench_sym = next(iter(data.keys()))
             bench_eng = BacktestEngine(strategy=BuyAndHoldStrategy(),
                                          data={bench_sym: data[bench_sym]},
                                          initial_capital=capital, sizing_fraction=1.0)
@@ -465,8 +492,8 @@ def page_options() -> None:
     st.markdown('<h3 style="margin-top:2rem;">Implied Volatility Smile</h3>', unsafe_allow_html=True)
     strikes = np.linspace(S * 0.7, S * 1.3, 21)
     injected = [sigma + 0.08 * ((k / S - 1) ** 2 - 0.01) for k in strikes]
-    mkt = [bs_call(S, k, T, r, iv) for k, iv in zip(strikes, injected)]
-    recovered = [bs_implied_vol(m, S, k, T, r, "call") for m, k in zip(mkt, strikes)]
+    mkt = [bs_call(S, k, T, r, iv) for k, iv in zip(strikes, injected, strict=False)]
+    recovered = [bs_implied_vol(m, S, k, T, r, "call") for m, k in zip(mkt, strikes, strict=False)]
     st.plotly_chart(iv_smile_chart(strikes, injected, recovered), use_container_width=True)
 
     st.markdown('<h3 style="margin-top:2rem;">Exotic options</h3>', unsafe_allow_html=True)
@@ -602,6 +629,7 @@ def page_ml() -> None:
             return
 
         from sklearn.ensemble import GradientBoostingClassifier
+
         from quantforge.ml.features import build_feature_matrix, target_labels
         from quantforge.ml.trainer import train_classifier
 

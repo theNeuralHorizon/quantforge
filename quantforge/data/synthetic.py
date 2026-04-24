@@ -1,7 +1,7 @@
 """Synthetic market data generators. Useful for deterministic tests + demos without network."""
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ def generate_gbm(
     mu: float = 0.08,
     sigma: float = 0.2,
     dt: float = 1 / 252,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> pd.Series:
     """Generate a Geometric Brownian Motion price series."""
     rng = np.random.default_rng(seed)
@@ -33,7 +33,7 @@ def generate_ohlcv(
     sigma: float = 0.2,
     intraday_vol: float = 0.5,
     base_volume: float = 1_000_000.0,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """Generate a plausible OHLCV frame from a GBM close series."""
     rng = np.random.default_rng(seed)
@@ -56,9 +56,9 @@ def generate_ohlcv(
 def generate_correlated_returns(
     n: int = 252,
     symbols: Sequence[str] = ("A", "B", "C"),
-    mu: Optional[np.ndarray] = None,
-    cov: Optional[np.ndarray] = None,
-    seed: Optional[int] = None,
+    mu: np.ndarray | None = None,
+    cov: np.ndarray | None = None,
+    seed: int | None = None,
 ) -> pd.DataFrame:
     """Generate correlated log-returns for multiple symbols."""
     rng = np.random.default_rng(seed)
@@ -77,7 +77,7 @@ def generate_correlated_returns(
 def generate_panel(
     symbols: Sequence[str] = ("AAA", "BBB", "CCC"),
     n: int = 252,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> dict:
     """Generate a dict of OHLCV frames keyed by symbol — a small panel."""
     out = {}

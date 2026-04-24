@@ -1,10 +1,13 @@
 """Portfolio optimization."""
-from quantforge.portfolio.markowitz import (
-    mean_variance, min_variance, max_sharpe, efficient_frontier,
-)
-from quantforge.portfolio.risk_parity import risk_parity, equal_risk_contribution
 from quantforge.portfolio.black_litterman import black_litterman
 from quantforge.portfolio.hrp import hierarchical_risk_parity
+from quantforge.portfolio.markowitz import (
+    efficient_frontier,
+    max_sharpe,
+    mean_variance,
+    min_variance,
+)
+from quantforge.portfolio.risk_parity import equal_risk_contribution, risk_parity
 
 __all__ = [
     "mean_variance",

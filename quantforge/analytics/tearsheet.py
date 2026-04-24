@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import pandas as pd
 
@@ -14,7 +13,7 @@ from quantforge.risk.drawdown import drawdown_table
 class Tearsheet:
     equity: pd.Series
     name: str = "Strategy"
-    benchmark: Optional[pd.Series] = None
+    benchmark: pd.Series | None = None
 
     def stats(self) -> dict:
         return summary_stats(self.equity)

@@ -7,7 +7,9 @@ import pytest
 
 from quantforge.data.synthetic import generate_correlated_returns
 from quantforge.risk.attribution import (
-    cvar_attribution, risk_budget_deviation, var_attribution,
+    cvar_attribution,
+    risk_budget_deviation,
+    var_attribution,
     volatility_attribution,
 )
 

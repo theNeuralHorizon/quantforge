@@ -4,7 +4,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 
 class EventType(str, Enum):
@@ -30,7 +29,7 @@ class MarketEvent(Event):
     volume: float
 
     @classmethod
-    def make(cls, ts: datetime, symbol: str, o: float, h: float, l: float, c: float, v: float) -> "MarketEvent":
+    def make(cls, ts: datetime, symbol: str, o: float, h: float, l: float, c: float, v: float) -> MarketEvent:
         return cls(EventType.MARKET, ts, symbol, o, h, l, c, v)
 
 
@@ -48,7 +47,7 @@ class OrderEvent(Event):
     order_type: str
     quantity: float
     direction: int
-    limit_price: Optional[float] = None
+    limit_price: float | None = None
 
 
 @dataclass(frozen=True)

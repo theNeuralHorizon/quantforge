@@ -17,8 +17,8 @@ def _free_port() -> int:
 
 @pytest.fixture(scope="module")
 def server_url():
-    from quantforge.api import auth
     from quantforge.api import audit as audit_mod
+    from quantforge.api import auth
     from quantforge.api.routes import alerts_routes
     auth.reset_keys()
     auth.register_raw_key("sdk_test_key_12345")

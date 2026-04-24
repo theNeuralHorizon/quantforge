@@ -13,11 +13,18 @@ from quantforge.api.schemas import BacktestRequest, BacktestResponse
 from quantforge.backtest import BacktestEngine
 from quantforge.data.loader import DataLoader
 from quantforge.strategies import (
-    BollingerMeanReversion, BuyAndHoldStrategy, CrossSectionalMomentum,
-    DonchianBreakout, DualMomentum, FactorStrategy, MACrossoverStrategy,
-    MomentumStrategy, RegimeSwitch, RSIReversalStrategy, VolTarget,
+    BollingerMeanReversion,
+    BuyAndHoldStrategy,
+    CrossSectionalMomentum,
+    DonchianBreakout,
+    DualMomentum,
+    FactorStrategy,
+    MACrossoverStrategy,
+    MomentumStrategy,
+    RegimeSwitch,
+    RSIReversalStrategy,
+    VolTarget,
 )
-
 
 router = APIRouter(prefix="/v1/backtest", tags=["backtest"])
 
@@ -90,18 +97,18 @@ def run_backtest(req: BacktestRequest, _key: str = Depends(verify_api_key)) -> B
     try:
         factory = _STRATEGY_FACTORY[req.strategy]
     except KeyError:
-        raise HTTPException(status_code=400, detail=f"unknown strategy: {req.strategy}")
+        raise HTTPException(status_code=400, detail=f"unknown strategy: {req.strategy}") from None
 
     try:
         strat = factory(req.params)
     except (ValueError, TypeError) as e:
-        raise HTTPException(status_code=422, detail=f"bad strategy params: {e}")
+        raise HTTPException(status_code=422, detail=f"bad strategy params: {e}") from e
 
     dl = DataLoader(cache_dir="data/cache")
     try:
         data = dl.yfinance_many(req.tickers, req.start, req.end)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"data fetch failed: {e}")
+        raise HTTPException(status_code=502, detail=f"data fetch failed: {e}") from e
 
     if any(df.empty for df in data.values()):
         raise HTTPException(status_code=404, detail="no data for one or more tickers")

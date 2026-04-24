@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -17,7 +17,6 @@ from quantforge.api.schemas import BacktestRequest
 from quantforge.backtest import BacktestEngine
 from quantforge.data.loader import DataLoader
 
-
 router = APIRouter(prefix="/v1/backtest", tags=["backtest"])
 
 
@@ -26,7 +25,7 @@ class WalkForwardRequest(BacktestRequest):
 
 
 class CompareRequest(BaseModel):
-    strategies: List[Dict[str, Any]] = Field(..., min_length=2, max_length=12,
+    strategies: list[dict[str, Any]] = Field(..., min_length=2, max_length=12,
                                                description="list of BacktestRequest-shaped dicts")
 
 
@@ -67,7 +66,7 @@ def walk_forward(req: WalkForwardRequest, _owner: str = Depends(verify_api_key))
         start_dt = pd.to_datetime(req.start)
         end_dt = pd.to_datetime(req.end)
     except Exception:
-        raise HTTPException(status_code=422, detail="bad start/end")
+        raise HTTPException(status_code=422, detail="bad start/end") from None
     if end_dt <= start_dt:
         raise HTTPException(status_code=422, detail="end must be > start")
 
@@ -77,7 +76,7 @@ def walk_forward(req: WalkForwardRequest, _owner: str = Depends(verify_api_key))
     if fold_days < 30:
         raise HTTPException(status_code=422, detail="fold too short; reduce n_folds or widen date range")
 
-    fold_requests: List[dict] = []
+    fold_requests: list[dict] = []
     for i in range(req.n_folds):
         s = start_dt + pd.Timedelta(days=i * fold_days)
         e = start_dt + pd.Timedelta(days=(i + 1) * fold_days) if i < req.n_folds - 1 else end_dt
@@ -86,7 +85,7 @@ def walk_forward(req: WalkForwardRequest, _owner: str = Depends(verify_api_key))
         d["end"] = e.strftime("%Y-%m-%d")
         fold_requests.append(d)
 
-    folds_out: List[dict] = []
+    folds_out: list[dict] = []
     with ThreadPoolExecutor(max_workers=min(4, req.n_folds)) as pool:
         futures = [pool.submit(_run_single, fr) for fr in fold_requests]
         for i, f in enumerate(futures):
@@ -119,7 +118,7 @@ def walk_forward(req: WalkForwardRequest, _owner: str = Depends(verify_api_key))
 @router.post("/compare")
 def compare(req: CompareRequest, _owner: str = Depends(verify_api_key)) -> dict:
     """Run N strategies in parallel and return ranked results by Sharpe."""
-    results: List[dict] = []
+    results: list[dict] = []
     with ThreadPoolExecutor(max_workers=min(4, len(req.strategies))) as pool:
         futures = [pool.submit(_run_single, s) for s in req.strategies]
         for i, f in enumerate(futures):

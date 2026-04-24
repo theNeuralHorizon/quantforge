@@ -1,9 +1,12 @@
 """Data layer: loaders, synthetic generators, cache."""
-from quantforge.data.synthetic import generate_gbm, generate_ohlcv, generate_correlated_returns
-from quantforge.data.loader import DataLoader, load_csv
 from quantforge.data.crypto import (
-    normalize_crypto_ticker, load_crypto, load_crypto_panel, crypto_volatility_24_7,
+    crypto_volatility_24_7,
+    load_crypto,
+    load_crypto_panel,
+    normalize_crypto_ticker,
 )
+from quantforge.data.loader import DataLoader, load_csv
+from quantforge.data.synthetic import generate_correlated_returns, generate_gbm, generate_ohlcv
 
 __all__ = [
     "generate_gbm",

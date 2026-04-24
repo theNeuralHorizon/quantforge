@@ -5,7 +5,8 @@ import hashlib
 import json
 import os
 import time
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 
 class _InMemoryCache:
@@ -15,7 +16,7 @@ class _InMemoryCache:
         self._store: dict[str, tuple[float, bytes]] = {}
         self._max = max_entries
 
-    def get(self, key: str) -> Optional[bytes]:
+    def get(self, key: str) -> bytes | None:
         item = self._store.get(key)
         if item is None:
             return None
@@ -46,7 +47,7 @@ class _RedisCache:
         self.client = redis.Redis.from_url(url, socket_timeout=2, socket_connect_timeout=2,
                                              decode_responses=False)
 
-    def get(self, key: str) -> Optional[bytes]:
+    def get(self, key: str) -> bytes | None:
         try:
             return self.client.get(key)
         except Exception:

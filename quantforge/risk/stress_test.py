@@ -1,11 +1,8 @@
 """Historical and factor-based stress scenarios."""
 from __future__ import annotations
 
-from typing import Dict
-
 import numpy as np
 import pandas as pd
-
 
 HISTORICAL_SHOCKS = {
     "2008_financial_crisis": {"equity": -0.37, "bond": 0.05, "credit": -0.20, "vol": 0.80},
@@ -17,7 +14,7 @@ HISTORICAL_SHOCKS = {
 }
 
 
-def shock_portfolio(weights: pd.Series, shocks: Dict[str, float]) -> float:
+def shock_portfolio(weights: pd.Series, shocks: dict[str, float]) -> float:
     """Apply per-asset shock to weights; returns portfolio PnL %."""
     missing = [k for k in weights.index if k not in shocks]
     if missing:
@@ -28,7 +25,7 @@ def shock_portfolio(weights: pd.Series, shocks: Dict[str, float]) -> float:
 def factor_shock(
     weights: pd.Series,
     factor_exposures: pd.DataFrame,
-    factor_shocks: Dict[str, float],
+    factor_shocks: dict[str, float],
 ) -> float:
     """PnL = w' * B * shock_f  where B has shape (assets, factors)."""
     shock = np.array([factor_shocks.get(f, 0.0) for f in factor_exposures.columns])
@@ -36,7 +33,7 @@ def factor_shock(
     return float(np.dot(weights.values, asset_impact))
 
 
-def stress_scenarios(weights: pd.Series, asset_class_map: Dict[str, str]) -> pd.DataFrame:
+def stress_scenarios(weights: pd.Series, asset_class_map: dict[str, str]) -> pd.DataFrame:
     """Apply all HISTORICAL_SHOCKS to a portfolio given asset-class mapping."""
     rows = []
     for name, shock in HISTORICAL_SHOCKS.items():

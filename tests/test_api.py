@@ -1,8 +1,6 @@
 """API test suite — fastapi TestClient, no network required (uses synthetic data)."""
 from __future__ import annotations
 
-import os
-
 import pytest
 from fastapi.testclient import TestClient
 

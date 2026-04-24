@@ -14,7 +14,6 @@ from quantforge.portfolio.hrp import hierarchical_risk_parity
 from quantforge.portfolio.markowitz import max_sharpe, min_variance
 from quantforge.portfolio.risk_parity import equal_risk_contribution
 
-
 router = APIRouter(prefix="/v1/portfolio", tags=["portfolio"])
 
 
@@ -25,7 +24,7 @@ def optimize(req: PortfolioOptimizeRequest,
     try:
         data = dl.yfinance_many(req.tickers, req.start, req.end)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"data fetch failed: {e}")
+        raise HTTPException(status_code=502, detail=f"data fetch failed: {e}") from e
 
     rets = pd.DataFrame(
         {t: df["close"].pct_change() for t, df in data.items()}
@@ -52,7 +51,7 @@ def optimize(req: PortfolioOptimizeRequest,
     sharpe = (port_ret - req.risk_free) / port_vol if port_vol > 1e-9 else 0.0
 
     return PortfolioOptimizeResponse(
-        weights={t: float(wi) for t, wi in zip(req.tickers, w)},
+        weights={t: float(wi) for t, wi in zip(req.tickers, w, strict=False)},
         expected_return=port_ret,
         expected_vol=port_vol,
         expected_sharpe=float(sharpe) if math.isfinite(sharpe) else 0.0,

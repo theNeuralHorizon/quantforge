@@ -1,8 +1,6 @@
 """Black-Litterman posterior mean & covariance."""
 from __future__ import annotations
 
-from typing import Optional, Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -11,12 +9,12 @@ def black_litterman(
     cov: pd.DataFrame | np.ndarray,
     market_caps: np.ndarray,
     risk_aversion: float = 2.5,
-    P: Optional[np.ndarray] = None,
-    Q: Optional[np.ndarray] = None,
-    omega: Optional[np.ndarray] = None,
+    P: np.ndarray | None = None,
+    Q: np.ndarray | None = None,
+    omega: np.ndarray | None = None,
     tau: float = 0.05,
     risk_free: float = 0.0,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Return (posterior_mu, posterior_cov) under the Black-Litterman model.
 
     Implied equilibrium returns: pi = lambda * Sigma * w_mkt

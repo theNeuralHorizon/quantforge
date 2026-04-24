@@ -5,22 +5,19 @@ clients that want to avoid sending the long-lived API key on every call.
 """
 from __future__ import annotations
 
-from typing import List, Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from quantforge.api.auth import verify_api_key
 from quantforge.api import jwt_auth as _jwt_auth
+from quantforge.api.auth import verify_api_key
 from quantforge.api.jwt_auth import issue_token
-
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
 
 class TokenRequest(BaseModel):
     subject: str = Field(..., min_length=1, max_length=128)
-    scopes: Optional[List[str]] = Field(default=None, max_length=20)
+    scopes: list[str] | None = Field(default=None, max_length=20)
     ttl_seconds: int = Field(3600, ge=60, le=86400)
 
 

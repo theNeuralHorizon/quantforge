@@ -1,11 +1,9 @@
 """Value-at-Risk and CVaR (Expected Shortfall)."""
 from __future__ import annotations
 
-from typing import Tuple
-
 import numpy as np
 import pandas as pd
-from scipy.stats import norm, skew, kurtosis
+from scipy.stats import kurtosis, norm, skew
 
 
 def _arr(r) -> np.ndarray:
@@ -76,7 +74,7 @@ def monte_carlo_var(
     mu: float, sigma: float,
     confidence: float = 0.95, horizon: int = 1,
     n_sims: int = 100_000, seed: int | None = None,
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     rng = np.random.default_rng(seed)
     sims = rng.normal(mu * horizon, sigma * np.sqrt(horizon), size=n_sims)
     var = -np.quantile(sims, 1 - confidence)

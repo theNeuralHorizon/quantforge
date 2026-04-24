@@ -9,7 +9,6 @@ from quantforge.data.loader import DataLoader
 from quantforge.ml.features import build_feature_matrix, target_labels
 from quantforge.ml.trainer import train_classifier
 
-
 router = APIRouter(prefix="/v1/ml", tags=["ml"])
 
 
@@ -21,7 +20,7 @@ def train(req: MLTrainRequest, _key: str = Depends(verify_api_key)) -> MLTrainRe
     try:
         df = dl.yfinance(req.ticker, req.start, req.end)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"data fetch failed: {e}")
+        raise HTTPException(status_code=502, detail=f"data fetch failed: {e}") from e
     if df.empty:
         raise HTTPException(status_code=404, detail="no data")
 

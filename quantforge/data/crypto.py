@@ -7,13 +7,12 @@ adds a 24/7 calendar-aware resampler for strategies that expect business days.
 from __future__ import annotations
 
 import re
-from typing import Iterable, Optional
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
 
 from quantforge.data.loader import DataLoader
-
 
 _CRYPTO_RX = re.compile(r"^[A-Z0-9]{2,10}(-[A-Z]{3})?$")
 
@@ -47,9 +46,9 @@ def normalize_crypto_ticker(ticker: str) -> str:
 def load_crypto(
     ticker: str,
     start: str = "2020-01-01",
-    end: Optional[str] = None,
+    end: str | None = None,
     interval: str = "1d",
-    cache_dir: Optional[str] = "data/cache",
+    cache_dir: str | None = "data/cache",
 ) -> pd.DataFrame:
     """Fetch one crypto OHLCV series via yfinance."""
     t = normalize_crypto_ticker(ticker)
@@ -64,9 +63,9 @@ def load_crypto(
 def load_crypto_panel(
     tickers: Iterable[str],
     start: str = "2020-01-01",
-    end: Optional[str] = None,
+    end: str | None = None,
     interval: str = "1d",
-    cache_dir: Optional[str] = "data/cache",
+    cache_dir: str | None = "data/cache",
 ) -> dict[str, pd.DataFrame]:
     dl = DataLoader(cache_dir=cache_dir)
     out: dict[str, pd.DataFrame] = {}

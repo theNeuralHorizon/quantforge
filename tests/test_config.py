@@ -54,13 +54,14 @@ class TestSettings:
 
     def test_body_size_bounds(self):
         # pydantic-settings enforces bounds
-        try:
-            from pydantic_settings import BaseSettings
-            os.environ["QUANTFORGE_MAX_BODY_KB"] = "999999999"
-            with pytest.raises(Exception):
-                reload_settings()
-        except ImportError:
+        import importlib.util
+
+        if importlib.util.find_spec("pydantic_settings") is None:
             pytest.skip("pydantic-settings not installed")
+        try:
+            os.environ["QUANTFORGE_MAX_BODY_KB"] = "999999999"
+            with pytest.raises(Exception):  # - pydantic raises a generic ValidationError
+                reload_settings()
         finally:
             os.environ.pop("QUANTFORGE_MAX_BODY_KB", None)
             reload_settings()

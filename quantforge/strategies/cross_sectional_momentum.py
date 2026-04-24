@@ -7,7 +7,6 @@ short the bottom quantile. This is one of the most documented anomalies in finan
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -23,7 +22,7 @@ class CrossSectionalMomentum(Strategy):
     top_q: float = 0.4         # top 40% = long
     bottom_q: float = 0.0      # 0 = long only; 0.4 would short bottom 40%
     name: str = "cross_sectional_momentum"
-    _panel: Dict[str, pd.DataFrame] = field(default_factory=dict)
+    _panel: dict[str, pd.DataFrame] = field(default_factory=dict)
     _last_ts: object = None
 
     def warmup(self) -> int:
@@ -37,7 +36,7 @@ class CrossSectionalMomentum(Strategy):
         start_idx = end_idx - self.lookback
         return float(close.iloc[end_idx] / close.iloc[start_idx] - 1)
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         self._panel[symbol] = history
         if bar.name == self._last_ts:
             return []

@@ -22,8 +22,8 @@ def _free_port() -> int:
 @pytest.fixture(scope="module")
 def running_server():
     os.environ["QUANTFORGE_JWT_SECRET"] = "this_is_a_minimum_32_byte_jwt_secret"
-    from quantforge.api import auth, jwt_auth
     from quantforge.api import audit as audit_mod
+    from quantforge.api import auth, jwt_auth
     auth.reset_keys()
     auth.register_raw_key("cli_test_key_12345")
     audit_mod.reset_for_tests()
@@ -95,11 +95,13 @@ class TestCLIRemoteCommands:
             depth = 0
             end = s
             for i, ch in enumerate(out[s:], start=s):
-                if ch == "{": depth += 1
+                if ch == "{":
+                    depth += 1
                 elif ch == "}":
                     depth -= 1
                     if depth == 0:
-                        end = i + 1; break
+                        end = i + 1
+                        break
             job = json.loads(out[s:end])
         assert "job_id" in job
 

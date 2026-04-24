@@ -7,8 +7,8 @@ analytically where possible, numerically otherwise.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import List, Literal, Optional, Tuple
+from dataclasses import dataclass
+from typing import Literal
 
 import numpy as np
 
@@ -27,13 +27,13 @@ class Leg:
 @dataclass
 class StrategyQuote:
     strategy: str
-    legs: List[Leg]
+    legs: list[Leg]
     net_premium: float                           # +ve = net debit, -ve = net credit
     greeks: dict                                 # delta, gamma, vega, theta, rho
-    max_profit: Optional[float]                  # None = unbounded
-    max_loss: Optional[float]                    # None = unbounded (short legs)
-    break_evens: List[float]
-    payoff: Tuple[np.ndarray, np.ndarray]        # (spot_grid, pnl_grid) at expiry
+    max_profit: float | None                  # None = unbounded
+    max_loss: float | None                    # None = unbounded (short legs)
+    break_evens: list[float]
+    payoff: tuple[np.ndarray, np.ndarray]        # (spot_grid, pnl_grid) at expiry
 
     def summary(self) -> str:
         legs_desc = ", ".join(
@@ -54,7 +54,7 @@ def _price_leg(leg: Leg, S: float, r: float, sigma: float, q: float) -> float:
     return leg.quantity * fn(S, leg.strike, leg.expiry_years, r, sigma, q)
 
 
-def _sum_greeks(legs: List[Leg], S: float, r: float, sigma: float, q: float) -> dict:
+def _sum_greeks(legs: list[Leg], S: float, r: float, sigma: float, q: float) -> dict:
     agg = {"delta": 0.0, "gamma": 0.0, "vega": 0.0, "theta": 0.0, "rho": 0.0}
     for leg in legs:
         g = all_greeks(S, leg.strike, leg.expiry_years, r, sigma, leg.option, q)
@@ -63,8 +63,8 @@ def _sum_greeks(legs: List[Leg], S: float, r: float, sigma: float, q: float) -> 
     return agg
 
 
-def _payoff_at_expiry(legs: List[Leg], net_premium: float,
-                       s_min: float, s_max: float, n: int = 201) -> Tuple[np.ndarray, np.ndarray]:
+def _payoff_at_expiry(legs: list[Leg], net_premium: float,
+                       s_min: float, s_max: float, n: int = 201) -> tuple[np.ndarray, np.ndarray]:
     spots = np.linspace(max(0.01, s_min), s_max, n)
     pnl = np.full(n, -net_premium, dtype=float)
     for leg in legs:
@@ -75,9 +75,9 @@ def _payoff_at_expiry(legs: List[Leg], net_premium: float,
     return spots, pnl
 
 
-def _find_break_evens(spots: np.ndarray, pnl: np.ndarray) -> List[float]:
+def _find_break_evens(spots: np.ndarray, pnl: np.ndarray) -> list[float]:
     """Linear interpolation between sign changes."""
-    out: List[float] = []
+    out: list[float] = []
     for i in range(1, len(pnl)):
         if pnl[i - 1] == 0:
             out.append(float(spots[i - 1]))
@@ -91,9 +91,9 @@ def _find_break_evens(spots: np.ndarray, pnl: np.ndarray) -> List[float]:
 
 
 def _quote(
-    strategy_name: str, legs: List[Leg],
+    strategy_name: str, legs: list[Leg],
     S: float, r: float, sigma: float, q: float,
-    max_profit: Optional[float] = None, max_loss: Optional[float] = None,
+    max_profit: float | None = None, max_loss: float | None = None,
     grid_range: float = 0.6,
 ) -> StrategyQuote:
     """Compute net premium, greeks, break-evens, payoff grid. If max_profit /
@@ -193,7 +193,7 @@ def iron_condor(S: float, p_long: float, p_short: float, c_short: float, c_long:
         Leg(+1.0, "put", p_long, T),   Leg(-1.0, "put", p_short, T),
         Leg(-1.0, "call", c_short, T), Leg(+1.0, "call", c_long, T),
     ]
-    credit = -(bs_put(S, p_long, T, r, sigma, q) - bs_put(S, p_short, T, r, sigma, q)
+    -(bs_put(S, p_long, T, r, sigma, q) - bs_put(S, p_short, T, r, sigma, q)
                + bs_call(S, c_long, T, r, sigma, q) - bs_call(S, c_short, T, r, sigma, q))
     # credit is negative of net_premium (net_premium is what you pay);
     # collection = -net_premium, positive if net_credit.

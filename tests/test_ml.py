@@ -1,14 +1,14 @@
 """Tests for quantforge.ml: features, target_labels, make_sequences, regime, forecast."""
 import math
-import pytest
+
 import numpy as np
 import pandas as pd
+import pytest
 
+from quantforge.data.synthetic import generate_ohlcv
 from quantforge.ml.features import build_feature_matrix, target_labels
-from quantforge.ml.forecast import make_sequences, ar_forecast, ewma_forecast
-from quantforge.ml.regime import bull_bear_regime, trend_regime, vol_regime, hmm_regimes
-from quantforge.data.synthetic import generate_ohlcv, generate_gbm
-
+from quantforge.ml.forecast import ar_forecast, ewma_forecast, make_sequences
+from quantforge.ml.regime import bull_bear_regime, hmm_regimes, trend_regime, vol_regime
 
 # ---------------------------------------------------------------------------
 # Fixtures

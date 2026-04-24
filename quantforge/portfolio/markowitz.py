@@ -4,8 +4,6 @@ Implemented with scipy (no CVXPY dependency needed) for robustness.
 """
 from __future__ import annotations
 
-from typing import List, Optional, Tuple
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -21,7 +19,7 @@ def _mu_numpy(mu: pd.Series | np.ndarray) -> np.ndarray:
 
 def min_variance(
     cov: pd.DataFrame | np.ndarray,
-    bounds: Optional[Tuple[float, float]] = (0.0, 1.0),
+    bounds: tuple[float, float] | None = (0.0, 1.0),
     total: float = 1.0,
 ) -> np.ndarray:
     """Minimum-variance long-only fully-invested portfolio."""
@@ -42,7 +40,7 @@ def max_sharpe(
     mu: pd.Series | np.ndarray,
     cov: pd.DataFrame | np.ndarray,
     risk_free: float = 0.0,
-    bounds: Optional[Tuple[float, float]] = (0.0, 1.0),
+    bounds: tuple[float, float] | None = (0.0, 1.0),
     total: float = 1.0,
 ) -> np.ndarray:
     """Tangency portfolio (max Sharpe)."""
@@ -69,7 +67,7 @@ def mean_variance(
     mu: pd.Series | np.ndarray,
     cov: pd.DataFrame | np.ndarray,
     gamma: float = 1.0,
-    bounds: Optional[Tuple[float, float]] = (0.0, 1.0),
+    bounds: tuple[float, float] | None = (0.0, 1.0),
     total: float = 1.0,
 ) -> np.ndarray:
     """Max `w'mu - 0.5*gamma*w'Sw` subject to sum(w)=total and bounds."""
@@ -91,7 +89,7 @@ def efficient_frontier(
     mu: pd.Series | np.ndarray,
     cov: pd.DataFrame | np.ndarray,
     n_points: int = 30,
-    bounds: Optional[Tuple[float, float]] = (0.0, 1.0),
+    bounds: tuple[float, float] | None = (0.0, 1.0),
 ) -> pd.DataFrame:
     """Sweep target returns; return DataFrame with risk/return/weights."""
     S = _cov_numpy(cov)

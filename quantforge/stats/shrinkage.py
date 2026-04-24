@@ -1,8 +1,6 @@
 """Covariance matrix shrinkage (Ledoit-Wolf, constant-correlation, OAS)."""
 from __future__ import annotations
 
-from typing import Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -21,7 +19,7 @@ def constant_correlation_target(sample_cov: np.ndarray) -> np.ndarray:
 
 def ledoit_wolf_shrinkage(
     returns: pd.DataFrame | np.ndarray,
-) -> Tuple[np.ndarray, float]:
+) -> tuple[np.ndarray, float]:
     """Ledoit-Wolf optimal linear shrinkage towards constant-correlation target.
 
     Returns (shrunk_cov, shrinkage_intensity in [0,1]).
@@ -45,7 +43,7 @@ def ledoit_wolf_shrinkage(
     std = np.sqrt(np.diag(sample_cov))
     corr = sample_cov / np.outer(std, std)
     avg_corr = (corr.sum() - np.trace(corr)) / (p * (p - 1))
-    theta_ii_jj = (y2.T @ (Xc ** 2 * 0)) / n  # placeholder; we use simpler form
+    (y2.T @ (Xc ** 2 * 0)) / n  # placeholder; we use simpler form
     # simpler rho: use diagonal contribution
     rho_diag = pi_mat.diagonal().sum()
     term_off = 0.0
@@ -73,7 +71,7 @@ def ledoit_wolf_shrinkage(
 
 def oracle_shrinkage(
     returns: pd.DataFrame | np.ndarray,
-) -> Tuple[np.ndarray, float]:
+) -> tuple[np.ndarray, float]:
     """Oracle Approximating Shrinkage (Chen, Wiesel, Eldar, Hero 2010)."""
     X = returns.values if isinstance(returns, pd.DataFrame) else np.asarray(returns)
     X = X[~np.isnan(X).any(axis=1)]

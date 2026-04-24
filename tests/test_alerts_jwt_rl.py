@@ -5,7 +5,6 @@ import os
 import time
 
 import numpy as np
-import pandas as pd
 import pytest
 
 
@@ -69,7 +68,7 @@ class TestJWT:
 # ---------- Alerts -----------------------------------------------------------
 class TestAlerts:
     def test_threshold_rule_fires(self):
-        from quantforge.alerts.rules import ThresholdRule, Severity
+        from quantforge.alerts.rules import Severity, ThresholdRule
         rule = ThresholdRule(
             name="drawdown", metric=lambda ctx: ctx["drawdown"],
             threshold=-0.10, direction="below", severity=Severity.CRITICAL,
@@ -148,7 +147,6 @@ class TestPPO:
         from quantforge.strategies.rl_ppo import PPOStrategy
         s = PPOStrategy(train_window=300, window=10, allow_short=False)
         # Smoke: policy always produces direction >= 0 after forcing short off
-        import pandas as pd
         from quantforge.data.synthetic import generate_ohlcv
         df = generate_ohlcv(n=400, seed=7)
         hist = df.iloc[:350]

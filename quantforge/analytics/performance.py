@@ -1,18 +1,20 @@
 """Return-series performance statistics."""
 from __future__ import annotations
 
-from typing import Dict
-
 import numpy as np
 import pandas as pd
 
 from quantforge.core.constants import TRADING_DAYS_YEAR
 from quantforge.risk.drawdown import max_drawdown
 from quantforge.risk.metrics import (
-    sharpe_ratio, sortino_ratio, calmar_ratio, omega_ratio,
-    tail_ratio, ulcer_index,
+    calmar_ratio,
+    omega_ratio,
+    sharpe_ratio,
+    sortino_ratio,
+    tail_ratio,
+    ulcer_index,
 )
-from quantforge.risk.var import historical_var, historical_cvar
+from quantforge.risk.var import historical_cvar, historical_var
 
 
 def annualized_return(returns: pd.Series, periods: int = TRADING_DAYS_YEAR) -> float:
@@ -59,7 +61,7 @@ def profit_factor(trades: pd.Series) -> float:
     return float(gains / losses)
 
 
-def avg_win_loss(trades: pd.Series) -> Dict[str, float]:
+def avg_win_loss(trades: pd.Series) -> dict[str, float]:
     t = trades.dropna()
     wins = t[t > 0]
     losses = t[t < 0]
@@ -70,7 +72,7 @@ def avg_win_loss(trades: pd.Series) -> Dict[str, float]:
     }
 
 
-def summary_stats(equity: pd.Series, risk_free: float = 0.0, trades: pd.DataFrame | None = None) -> Dict[str, float]:
+def summary_stats(equity: pd.Series, risk_free: float = 0.0, trades: pd.DataFrame | None = None) -> dict[str, float]:
     r = equity.pct_change().dropna()
     mdd, peak, trough = max_drawdown(equity)
     out = {

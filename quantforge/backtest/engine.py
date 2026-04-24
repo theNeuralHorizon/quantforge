@@ -11,7 +11,7 @@ only materialize a DataFrame when actually handed to the strategy.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Protocol
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
@@ -24,7 +24,7 @@ from quantforge.core.portfolio import Portfolio
 
 class Strategy(Protocol):
     """Duck-typed strategy interface."""
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]: ...
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]: ...
     def warmup(self) -> int: ...
 
 
@@ -37,8 +37,8 @@ class _SymbolBuffer:
     __slots__ = ("_ts", "_cols", "_n", "_cap")
 
     def __init__(self, initial_cap: int = 256) -> None:
-        self._ts: List[pd.Timestamp] = []
-        self._cols: Dict[str, np.ndarray] = {c: np.empty(initial_cap, dtype=np.float64) for c in _OHLCV_COLS}
+        self._ts: list[pd.Timestamp] = []
+        self._cols: dict[str, np.ndarray] = {c: np.empty(initial_cap, dtype=np.float64) for c in _OHLCV_COLS}
         self._n = 0
         self._cap = initial_cap
 
@@ -64,7 +64,7 @@ class _SymbolBuffer:
     def __len__(self) -> int:
         return self._n
 
-    def as_frame(self, tail: Optional[int] = None) -> pd.DataFrame:
+    def as_frame(self, tail: int | None = None) -> pd.DataFrame:
         """Return a DataFrame view. Zero-copy where possible via np.asarray slicing."""
         if self._n == 0:
             return pd.DataFrame(columns=list(_OHLCV_COLS))
@@ -122,16 +122,16 @@ class BacktestResult:
 @dataclass
 class BacktestEngine:
     strategy: Strategy
-    data: Dict[str, pd.DataFrame]
+    data: dict[str, pd.DataFrame]
     initial_capital: float = 100_000.0
-    broker: Optional[SimulatedBroker] = None
+    broker: SimulatedBroker | None = None
     sizing_fraction: float = 0.1
     target_weights: bool = False
     rebalance: str = "bar"  # "bar" | "weekly" | "monthly"
-    history_tail: Optional[int] = None  # if set, strategies see only the last N bars
+    history_tail: int | None = None  # if set, strategies see only the last N bars
 
     portfolio: Portfolio = field(init=False)
-    _buffers: Dict[str, _SymbolBuffer] = field(init=False)
+    _buffers: dict[str, _SymbolBuffer] = field(init=False)
 
     def __post_init__(self) -> None:
         self.portfolio = Portfolio(initial_capital=self.initial_capital)
@@ -152,7 +152,7 @@ class BacktestEngine:
         target_qty = target_value / price
         return target_qty - current_qty
 
-    def _should_rebalance(self, ts: pd.Timestamp, prev_ts: Optional[pd.Timestamp]) -> bool:
+    def _should_rebalance(self, ts: pd.Timestamp, prev_ts: pd.Timestamp | None) -> bool:
         if self.rebalance == "bar":
             return True
         if prev_ts is None:
@@ -167,13 +167,13 @@ class BacktestEngine:
         all_index = sorted({ts for df in self.data.values() for ts in df.index})
         warmup = self.strategy.warmup()
 
-        trades: List[dict] = []
-        positions_snapshots: List[dict] = []
-        last_rebalance_ts: Optional[pd.Timestamp] = None
+        trades: list[dict] = []
+        positions_snapshots: list[dict] = []
+        last_rebalance_ts: pd.Timestamp | None = None
 
         # Pre-extract numpy columns once — avoids df.loc[ts] in hot loop
-        col_cache: Dict[str, Dict[str, np.ndarray]] = {}
-        ts_idx_cache: Dict[str, Dict[pd.Timestamp, int]] = {}
+        col_cache: dict[str, dict[str, np.ndarray]] = {}
+        ts_idx_cache: dict[str, dict[pd.Timestamp, int]] = {}
         for s, df in self.data.items():
             col_cache[s] = {c: df[c].values for c in _OHLCV_COLS if c in df.columns}
             # fill any missing OHLCV columns with close
@@ -182,7 +182,7 @@ class BacktestEngine:
             ts_idx_cache[s] = {ts: i for i, ts in enumerate(df.index)}
 
         for i, ts in enumerate(all_index):
-            current_prices: Dict[str, float] = {}
+            current_prices: dict[str, float] = {}
             for symbol in self.data:
                 idx = ts_idx_cache[symbol].get(ts)
                 if idx is None:

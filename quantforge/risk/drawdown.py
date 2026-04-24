@@ -1,10 +1,6 @@
 """Drawdown analytics."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Tuple
-
-import numpy as np
 import pandas as pd
 
 
@@ -13,7 +9,7 @@ def drawdown_series(equity: pd.Series) -> pd.Series:
     return equity / peak - 1.0
 
 
-def max_drawdown(equity: pd.Series) -> Tuple[float, pd.Timestamp, pd.Timestamp]:
+def max_drawdown(equity: pd.Series) -> tuple[float, pd.Timestamp, pd.Timestamp]:
     """Return (max_dd, peak_date, trough_date)."""
     dd = drawdown_series(equity)
     trough = dd.idxmin()
@@ -39,7 +35,7 @@ def drawdown_table(equity: pd.Series, top_n: int = 5) -> pd.DataFrame:
     groups = change.cumsum()
 
     rows = []
-    for grp_id, grp in dd[in_dd].groupby(groups[in_dd]):
+    for _grp_id, grp in dd[in_dd].groupby(groups[in_dd]):
         if grp.empty:
             continue
         trough = grp.idxmin()

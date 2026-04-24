@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -18,7 +17,7 @@ class FactorStrategy(Strategy):
     lookback_vol: int = 60
     top_q: float = 0.2
     name: str = "factor_composite"
-    _panel: Dict[str, pd.DataFrame] = field(default_factory=dict)
+    _panel: dict[str, pd.DataFrame] = field(default_factory=dict)
     _last_ts: object = None
 
     def warmup(self) -> int:
@@ -35,7 +34,7 @@ class FactorStrategy(Strategy):
         z_vol = (inv_vol - 0) / max(0.01, abs(vol))
         return float(0.5 * z_mom + 0.5 * z_vol)
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         self._panel[symbol] = history
         if bar.name == self._last_ts:
             return []

@@ -1,8 +1,6 @@
 """Regime detection: Markov switching on returns, structural break detection."""
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -21,7 +19,7 @@ def markov_switching_returns(
     n = len(r)
     if n < 50:
         raise ValueError("need at least 50 obs")
-    rng = np.random.default_rng(seed)
+    np.random.default_rng(seed)
 
     # initialize
     mu = np.linspace(r.mean() - r.std(), r.mean() + r.std(), n_states)
@@ -107,7 +105,7 @@ def markov_switching_returns(
 
 def detect_structural_breaks(
     series: pd.Series, window: int = 63, threshold: float = 3.0,
-) -> List[pd.Timestamp]:
+) -> list[pd.Timestamp]:
     """Simple structural-break detector via rolling z-score of rolling mean.
 
     Returns a list of timestamps where the rolling mean makes a z-move larger

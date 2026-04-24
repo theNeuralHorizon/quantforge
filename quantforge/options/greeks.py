@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import math
-from typing import Dict, Literal
+from typing import Literal
 
 from scipy.stats import norm
 
@@ -56,7 +56,7 @@ def rho(S: float, K: float, T: float, r: float, sigma: float, option: Literal["c
     return -K * T * math.exp(-r * T) * norm.cdf(-D2)
 
 
-def all_greeks(S: float, K: float, T: float, r: float, sigma: float, option: Literal["call", "put"] = "call", q: float = 0.0) -> Dict[str, float]:
+def all_greeks(S: float, K: float, T: float, r: float, sigma: float, option: Literal["call", "put"] = "call", q: float = 0.0) -> dict[str, float]:
     return {
         "delta": delta(S, K, T, r, sigma, option, q),
         "gamma": gamma(S, K, T, r, sigma, q),

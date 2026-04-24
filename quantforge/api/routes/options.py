@@ -5,14 +5,15 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from quantforge.api.auth import verify_api_key
 from quantforge.api.schemas import (
-    ImpliedVolRequest, ImpliedVolResponse,
-    OptionsPriceRequest, OptionsPriceResponse,
+    ImpliedVolRequest,
+    ImpliedVolResponse,
+    OptionsPriceRequest,
+    OptionsPriceResponse,
 )
 from quantforge.options.binomial import crr_american, crr_price
 from quantforge.options.black_scholes import bs_call, bs_implied_vol, bs_put
 from quantforge.options.greeks import all_greeks
 from quantforge.options.monte_carlo import mc_european
-
 
 router = APIRouter(prefix="/v1/options", tags=["options"])
 

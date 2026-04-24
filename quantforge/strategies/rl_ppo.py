@@ -8,7 +8,6 @@ demonstrate RL for quant; not a production model.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -83,7 +82,7 @@ class PPOStrategy(Strategy):
     lr: float = 0.005
     allow_short: bool = True
     name: str = "ppo_lite"
-    _net: "PPONet | None" = None
+    _net: PPONet | None = None
     _bars_since_retrain: int = 0
 
     def warmup(self) -> int:
@@ -148,7 +147,7 @@ class PPOStrategy(Strategy):
             self._net.Wv += self.lr * h.T @ err.reshape(-1, 1) / len(X)
             self._net.bv += self.lr * err.mean()
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if len(history) < self.warmup():
             return []
         if self._net is None or self._bars_since_retrain >= self.retrain_every:

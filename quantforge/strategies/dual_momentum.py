@@ -8,7 +8,6 @@ This is one of the simplest strategies with documented, persistent out-of-sample
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -23,7 +22,7 @@ class DualMomentum(Strategy):
     cash_asset: str = "TLT"  # fall-back "cash" — long-duration bonds
     risk_free_daily: float = 0.0  # absolute momentum hurdle (daily return)
     name: str = "dual_momentum"
-    _panel: Dict[str, pd.DataFrame] = field(default_factory=dict)
+    _panel: dict[str, pd.DataFrame] = field(default_factory=dict)
     _last_ts: object = None
 
     def warmup(self) -> int:
@@ -35,7 +34,7 @@ class DualMomentum(Strategy):
             return np.nan
         return float(close.iloc[-1] / close.iloc[-self.lookback - 1] - 1)
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         self._panel[symbol] = history
         if bar.name == self._last_ts:
             return []

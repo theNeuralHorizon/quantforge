@@ -5,10 +5,8 @@ import hashlib
 import hmac
 import os
 import secrets
-from typing import Dict, Optional
 
 from fastapi import Header, HTTPException, status
-
 
 # Keys loaded from env as comma-separated SHA256 hashes of raw keys.
 # For dev, we auto-generate one key at startup if none are configured.
@@ -28,7 +26,7 @@ def _load_allowed_hashes() -> set[str]:
 
 
 _ALLOWED_HASHES = _load_allowed_hashes()
-_DEV_KEY: Optional[str] = None
+_DEV_KEY: str | None = None
 
 
 def get_or_create_dev_key() -> str:
@@ -47,7 +45,7 @@ def _unauth_allowed() -> bool:
     return os.environ.get(_ENV_ALLOW_UNAUTH, "").lower() in ("1", "true", "yes")
 
 
-def verify_api_key(x_api_key: Optional[str] = Header(None, alias="X-API-Key")) -> str:
+def verify_api_key(x_api_key: str | None = Header(None, alias="X-API-Key")) -> str:
     """FastAPI dependency: validates the API key header in constant time.
 
     If QUANTFORGE_ALLOW_UNAUTH=1, skips auth (for dashboards behind other gateways).
@@ -94,6 +92,6 @@ def is_dev_mode() -> bool:
     return bool(_DEV_KEY) and not os.environ.get(_ENV_KEYS, "").strip()
 
 
-def get_dev_key_if_dev_mode() -> Optional[str]:
+def get_dev_key_if_dev_mode() -> str | None:
     """Return the dev key ONLY if we're in dev mode (never leak real keys)."""
     return _DEV_KEY if is_dev_mode() else None

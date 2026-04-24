@@ -1,15 +1,20 @@
 """Advanced statistical methods: GARCH, cointegration, covariance shrinkage."""
-from quantforge.stats.garch import garch11_fit, garch11_forecast, GARCHParams
 from quantforge.stats.cointegration import (
-    engle_granger, johansen_trace,
-    rolling_cointegration, half_life_of_mean_reversion,
+    engle_granger,
+    half_life_of_mean_reversion,
+    johansen_trace,
+    rolling_cointegration,
+)
+from quantforge.stats.garch import GARCHParams, garch11_fit, garch11_forecast
+from quantforge.stats.regime import (
+    detect_structural_breaks,
+    markov_switching_returns,
 )
 from quantforge.stats.shrinkage import (
-    ledoit_wolf_shrinkage, constant_correlation_target,
-    oracle_shrinkage, shrunk_covariance,
-)
-from quantforge.stats.regime import (
-    markov_switching_returns, detect_structural_breaks,
+    constant_correlation_target,
+    ledoit_wolf_shrinkage,
+    oracle_shrinkage,
+    shrunk_covariance,
 )
 
 __all__ = [

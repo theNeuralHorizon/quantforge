@@ -2,14 +2,14 @@
 from __future__ import annotations
 
 import math
-from typing import Literal, Optional, Tuple
+from typing import Literal
 
 import numpy as np
 
 
 def _gbm_paths(
     S: float, T: float, r: float, sigma: float, q: float,
-    steps: int, n_paths: int, antithetic: bool, seed: Optional[int],
+    steps: int, n_paths: int, antithetic: bool, seed: int | None,
 ) -> np.ndarray:
     rng = np.random.default_rng(seed)
     dt = T / steps
@@ -34,8 +34,8 @@ def mc_european(
     option: Literal["call", "put"] = "call",
     q: float = 0.0,
     steps: int = 1, n_paths: int = 50_000,
-    antithetic: bool = True, seed: Optional[int] = None,
-) -> Tuple[float, float]:
+    antithetic: bool = True, seed: int | None = None,
+) -> tuple[float, float]:
     paths = _gbm_paths(S, T, r, sigma, q, steps, n_paths, antithetic, seed)
     ST = paths[-1]
     payoff = np.maximum(ST - K, 0.0) if option == "call" else np.maximum(K - ST, 0.0)
@@ -49,9 +49,9 @@ def mc_asian(
     option: Literal["call", "put"] = "call",
     q: float = 0.0,
     steps: int = 52, n_paths: int = 50_000,
-    antithetic: bool = True, seed: Optional[int] = None,
+    antithetic: bool = True, seed: int | None = None,
     average: Literal["arithmetic", "geometric"] = "arithmetic",
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     paths = _gbm_paths(S, T, r, sigma, q, steps, n_paths, antithetic, seed)
     if average == "arithmetic":
         avg = paths[1:].mean(axis=0)
@@ -70,8 +70,8 @@ def mc_barrier(
     option: Literal["call", "put"] = "call",
     q: float = 0.0, rebate: float = 0.0,
     steps: int = 100, n_paths: int = 50_000,
-    antithetic: bool = True, seed: Optional[int] = None,
-) -> Tuple[float, float]:
+    antithetic: bool = True, seed: int | None = None,
+) -> tuple[float, float]:
     paths = _gbm_paths(S, T, r, sigma, q, steps, n_paths, antithetic, seed)
     hit_up = (paths >= barrier).any(axis=0)
     hit_down = (paths <= barrier).any(axis=0)
@@ -94,13 +94,13 @@ def mc_barrier(
 
 
 def mc_lookback(
-    S: float, K: Optional[float], T: float, r: float, sigma: float,
+    S: float, K: float | None, T: float, r: float, sigma: float,
     option: Literal["call", "put"] = "call",
     kind: Literal["fixed", "floating"] = "floating",
     q: float = 0.0,
     steps: int = 100, n_paths: int = 50_000,
-    antithetic: bool = True, seed: Optional[int] = None,
-) -> Tuple[float, float]:
+    antithetic: bool = True, seed: int | None = None,
+) -> tuple[float, float]:
     paths = _gbm_paths(S, T, r, sigma, q, steps, n_paths, antithetic, seed)
     smax = paths.max(axis=0)
     smin = paths.min(axis=0)

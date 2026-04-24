@@ -1,11 +1,10 @@
 """Tests for quantforge.core: Position fill math and Portfolio accounting."""
-import math
-import pytest
 from datetime import datetime
 
-from quantforge.core.position import Position
-from quantforge.core.portfolio import Portfolio
+import pytest
 
+from quantforge.core.portfolio import Portfolio
+from quantforge.core.position import Position
 
 # ---------------------------------------------------------------------------
 # Position fill math

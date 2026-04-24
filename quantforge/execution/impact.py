@@ -1,8 +1,6 @@
 """Market impact models: square-root, linear, and the full Almgren-Chriss schedule."""
 from __future__ import annotations
 
-from typing import Tuple
-
 import numpy as np
 
 
@@ -22,7 +20,7 @@ def almgren_chriss_schedule(
     X: float, T: int,
     sigma: float, eta: float, gamma: float = 0.0,
     risk_aversion: float = 1e-6,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Return (trades_per_step, shares_remaining) for the Almgren-Chriss problem.
 
     Parameters

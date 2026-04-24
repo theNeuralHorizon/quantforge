@@ -9,7 +9,6 @@ Supports both volatility (analytical) and historical VaR/CVaR (numerical).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -182,7 +181,7 @@ def cvar_attribution(
 def risk_budget_deviation(
     weights: pd.Series | np.ndarray,
     cov: pd.DataFrame | np.ndarray,
-    target_budget: Dict[str, float] | np.ndarray,
+    target_budget: dict[str, float] | np.ndarray,
 ) -> pd.DataFrame:
     """How far is each asset's risk contribution from its target?
 

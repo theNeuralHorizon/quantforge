@@ -1,10 +1,17 @@
 """Alerting engine: rules + channels (webhook, Slack, log)."""
-from quantforge.alerts.rules import (
-    AlertRule, ThresholdRule, Severity, AlertEvent,
+from quantforge.alerts.channels import (
+    Channel,
+    LogChannel,
+    NullChannel,
+    SlackChannel,
+    WebhookChannel,
 )
 from quantforge.alerts.engine import AlertEngine
-from quantforge.alerts.channels import (
-    Channel, WebhookChannel, SlackChannel, LogChannel, NullChannel,
+from quantforge.alerts.rules import (
+    AlertEvent,
+    AlertRule,
+    Severity,
+    ThresholdRule,
 )
 
 __all__ = [

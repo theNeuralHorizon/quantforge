@@ -8,15 +8,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
 
 from quantforge.backtest.commission import CommissionModel, FixedBpsCommission
-from quantforge.backtest.slippage import SlippageModel, FixedBpsSlippage
+from quantforge.backtest.slippage import FixedBpsSlippage, SlippageModel
 from quantforge.core.event import EventType, FillEvent
 from quantforge.core.order import Order, OrderSide, OrderStatus, OrderType
 
 
-def _limit_fill_price(order: Order, bar: Dict[str, float]) -> Optional[float]:
+def _limit_fill_price(order: Order, bar: dict[str, float]) -> float | None:
     """Return fill price for a LIMIT if triggered this bar, else None."""
     lo, hi, op = bar["low"], bar["high"], bar["open"]
     if order.side == OrderSide.BUY:
@@ -31,7 +30,7 @@ def _limit_fill_price(order: Order, bar: Dict[str, float]) -> Optional[float]:
         return None
 
 
-def _stop_triggered(order: Order, bar: Dict[str, float]) -> Optional[float]:
+def _stop_triggered(order: Order, bar: dict[str, float]) -> float | None:
     """For a STOP order, return the trigger price if hit during the bar, else None.
 
     Stop buy triggers at stop_price when high >= stop_price.
@@ -60,8 +59,8 @@ def _stop_triggered(order: Order, bar: Dict[str, float]) -> Optional[float]:
 class SimulatedBroker:
     slippage: SlippageModel = field(default_factory=FixedBpsSlippage)
     commission: CommissionModel = field(default_factory=FixedBpsCommission)
-    pending: List[Order] = field(default_factory=list)
-    fills: List[FillEvent] = field(default_factory=list)
+    pending: list[Order] = field(default_factory=list)
+    fills: list[FillEvent] = field(default_factory=list)
 
     def submit(self, order: Order) -> None:
         self.pending.append(order)
@@ -73,10 +72,10 @@ class SimulatedBroker:
                 return True
         return False
 
-    def on_bar(self, ts: datetime, symbol: str, bar: Dict[str, float]) -> List[FillEvent]:
+    def on_bar(self, ts: datetime, symbol: str, bar: dict[str, float]) -> list[FillEvent]:
         """Process pending orders for this symbol using the bar."""
-        filled_now: List[FillEvent] = []
-        still_pending: List[Order] = []
+        filled_now: list[FillEvent] = []
+        still_pending: list[Order] = []
 
         for order in self.pending:
             if order.symbol != symbol or not order.is_active:
@@ -85,7 +84,7 @@ class SimulatedBroker:
 
             side = 1 if order.side == OrderSide.BUY else -1
             fill_ref = bar["open"]
-            px: Optional[float] = None
+            px: float | None = None
 
             if order.order_type == OrderType.MARKET:
                 px = self.slippage.adjust(fill_ref, order.quantity, bar["volume"], side)

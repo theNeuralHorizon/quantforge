@@ -1,7 +1,7 @@
 """Position holds quantity, average cost, and realized/unrealized P&L for one symbol."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass

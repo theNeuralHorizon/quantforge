@@ -1,13 +1,14 @@
 """Tests for quantforge.analytics: performance, tearsheet, attribution."""
 import math
-import pytest
+from typing import ClassVar
+
 import numpy as np
 import pandas as pd
+import pytest
 
-from quantforge.analytics.performance import summary_stats
-from quantforge.analytics.tearsheet import tearsheet_text, Tearsheet
 from quantforge.analytics.attribution import brinson_attribution, factor_attribution
-
+from quantforge.analytics.performance import summary_stats
+from quantforge.analytics.tearsheet import Tearsheet, tearsheet_text
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -32,7 +33,7 @@ def stats(equity):
 # ---------------------------------------------------------------------------
 
 class TestSummaryStats:
-    REQUIRED_KEYS = {
+    REQUIRED_KEYS: ClassVar[set[str]] = {
         "total_return", "annual_return", "annual_vol", "sharpe", "sortino",
         "calmar", "omega", "tail_ratio", "ulcer_index", "max_drawdown",
         "var_95", "cvar_95", "best_day", "worst_day", "skew", "kurt",

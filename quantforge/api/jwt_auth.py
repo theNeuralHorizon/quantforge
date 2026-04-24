@@ -3,11 +3,9 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Optional, Set
 
 import jwt  # PyJWT
 from fastapi import Header, HTTPException, status
-
 
 _ENV_JWT_SECRET = "QUANTFORGE_JWT_SECRET"
 _ENV_JWT_ISSUER = "QUANTFORGE_JWT_ISSUER"
@@ -37,7 +35,7 @@ def reload_config() -> None:
 
 def issue_token(
     subject: str,
-    scopes: Optional[Set[str]] = None,
+    scopes: set[str] | None = None,
     ttl_seconds: int = 3600,
 ) -> str:
     """Issue a JWT for `subject` (typically a user id or service name).
@@ -67,16 +65,16 @@ def decode_token(token: str) -> dict:
             audience=_config.audience, issuer=_config.issuer,
         )
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="token expired")
+        raise HTTPException(status_code=401, detail="token expired") from None
     except jwt.InvalidAudienceError:
-        raise HTTPException(status_code=401, detail="invalid audience")
+        raise HTTPException(status_code=401, detail="invalid audience") from None
     except jwt.InvalidIssuerError:
-        raise HTTPException(status_code=401, detail="invalid issuer")
+        raise HTTPException(status_code=401, detail="invalid issuer") from None
     except jwt.InvalidTokenError as e:
-        raise HTTPException(status_code=401, detail=f"invalid token: {e}")
+        raise HTTPException(status_code=401, detail=f"invalid token: {e}") from e
 
 
-def verify_bearer(authorization: Optional[str] = Header(None)) -> dict:
+def verify_bearer(authorization: str | None = Header(None)) -> dict:
     """FastAPI dependency: returns the decoded claims or raises 401."""
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(
@@ -88,10 +86,13 @@ def verify_bearer(authorization: Optional[str] = Header(None)) -> dict:
     return decode_token(token)
 
 
+_AUTH_HEADER = Header(None, alias="Authorization")
+
+
 def require_scopes(*required: str):
     """Dependency factory: ensures the JWT carries all required scopes."""
     req = set(required)
-    def dep(claims: dict = Header(None, alias="Authorization")) -> dict:
+    def dep(claims: dict = _AUTH_HEADER) -> dict:
         # Actually decode via verify_bearer; this wrapper composes cleanly
         claims = verify_bearer(claims if isinstance(claims, str) else None)
         have = set(claims.get("scopes", []))

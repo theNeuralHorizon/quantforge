@@ -10,28 +10,27 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from quantforge import __version__
+from quantforge.api.audit import AuditMiddleware
 from quantforge.api.auth import get_or_create_dev_key, verify_api_key
 from quantforge.api.cache import cache_backend
 from quantforge.api.logging_config import configure_logging
 from quantforge.api.metrics import PrometheusMiddleware, metrics_endpoint
+from quantforge.api.routes import alerts_routes, audit_routes, backtest_extra, jwt_routes
 from quantforge.api.routes import backtest as backtest_route
+from quantforge.api.routes import jobs as jobs_route
 from quantforge.api.routes import market as market_route
 from quantforge.api.routes import ml as ml_route
-from quantforge.api.routes import jobs as jobs_route
-from quantforge.api.routes import jwt_routes
 from quantforge.api.routes import options as options_route
 from quantforge.api.routes import portfolio as portfolio_route
 from quantforge.api.routes import risk as risk_route
-from quantforge.api.routes import alerts_routes
-from quantforge.api.routes import audit_routes
-from quantforge.api.routes import backtest_extra
-from quantforge.api.audit import AuditMiddleware
-from quantforge.api.ws import router as ws_router
 from quantforge.api.schemas import HealthResponse, ReadinessResponse
 from quantforge.api.security import (
-    MaxBodySizeMiddleware, RequestIDMiddleware, SecurityHeadersMiddleware,
+    MaxBodySizeMiddleware,
+    RequestIDMiddleware,
+    SecurityHeadersMiddleware,
     build_cors_config,
 )
+from quantforge.api.ws import router as ws_router
 
 try:
     from slowapi import Limiter

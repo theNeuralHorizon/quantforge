@@ -1,13 +1,12 @@
 """Tests for quantforge.backtest.engine and BacktestResult."""
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
 from quantforge.backtest.engine import BacktestEngine, BacktestResult
-from quantforge.strategies.momentum import MomentumStrategy
+from quantforge.data.synthetic import generate_ohlcv, generate_panel
 from quantforge.strategies.ma_crossover import MACrossoverStrategy
-from quantforge.data.synthetic import generate_panel, generate_ohlcv
-
+from quantforge.strategies.momentum import MomentumStrategy
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -34,7 +33,7 @@ def simulate_portfolio(
     n_steps: int = 252,
     dt: float = 1 / 252,
     n_paths: int = 10_000,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> SimulationResult:
     """Simulate GBM wealth paths. Returns SimulationResult with paths, terminal wealth, and drawdowns."""
     rng = np.random.default_rng(seed)
@@ -57,7 +56,7 @@ def simulate_portfolio_returns(
     initial: float = 100_000.0,
     n_steps: int = 252,
     n_paths: int = 10_000,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> SimulationResult:
     """Simulate a portfolio using bootstrapped historical returns.
 

@@ -1,8 +1,6 @@
 """Regime detection: simple rule-based + Gaussian-mixture HMM-lite."""
 from __future__ import annotations
 
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 
@@ -31,7 +29,7 @@ def trend_regime(close: pd.Series, short: int = 50, long: int = 200) -> pd.Serie
     return pd.Series(np.where(s > l, 1, -1), index=close.index).fillna(0)
 
 
-def hmm_regimes(returns: pd.Series, n_states: int = 2, seed: Optional[int] = 42) -> pd.Series:
+def hmm_regimes(returns: pd.Series, n_states: int = 2, seed: int | None = 42) -> pd.Series:
     """Fit a Gaussian Mixture on returns as a lightweight regime detector.
 
     This is not a full HMM (no transition dynamics), but captures the regime

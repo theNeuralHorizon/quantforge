@@ -5,12 +5,10 @@ import asyncio
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Dict, Optional, Set
 
 from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect, status
 
-from quantforge.api.auth import _sha256, _ALLOWED_HASHES, _unauth_allowed
-
+from quantforge.api.auth import _ALLOWED_HASHES, _sha256, _unauth_allowed
 
 router = APIRouter(tags=["ws"])
 
@@ -19,7 +17,7 @@ router = APIRouter(tags=["ws"])
 class _Hub:
     """In-process pub/sub hub for the single-process case. For multi-replica
     deployments, swap this for a Redis pub/sub adapter (hook left below)."""
-    clients: Dict[str, Set[WebSocket]] = field(default_factory=dict)  # topic -> sockets
+    clients: dict[str, set[WebSocket]] = field(default_factory=dict)  # topic -> sockets
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
 
     async def subscribe(self, topic: str, ws: WebSocket) -> None:
@@ -59,7 +57,7 @@ class _Hub:
 hub = _Hub()
 
 
-def _auth_ok(api_key: Optional[str]) -> bool:
+def _auth_ok(api_key: str | None) -> bool:
     if _unauth_allowed():
         return True
     if not api_key or len(api_key) < 8 or len(api_key) > 128:
@@ -71,7 +69,7 @@ def _auth_ok(api_key: Optional[str]) -> bool:
 async def ws_events(
     ws: WebSocket,
     topic: str = Query("signals", min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_.:-]+$"),
-    api_key: Optional[str] = Query(None, max_length=128),
+    api_key: str | None = Query(None, max_length=128),
 ) -> None:
     """Subscribe to a topic. Examples: signals, jobs, alerts, market.SPY.
     The client may also send JSON `{"action": "subscribe", "topic": ...}` or
@@ -84,7 +82,7 @@ async def ws_events(
         return
 
     await ws.accept()
-    topics: Set[str] = {topic}
+    topics: set[str] = {topic}
     await hub.subscribe(topic, ws)
     try:
         await ws.send_json({

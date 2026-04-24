@@ -1,8 +1,6 @@
 """Statistical indicators: rolling stats, mean-reversion tests, volatility estimators."""
 from __future__ import annotations
 
-from typing import Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -51,7 +49,7 @@ _ADF_CRIT_TABLE = {  # approximate MacKinnon critical values (no-trend model)
 }
 
 
-def _native_adf(series: pd.Series, max_lag: int = 1) -> Tuple[float, float]:
+def _native_adf(series: pd.Series, max_lag: int = 1) -> tuple[float, float]:
     """Native Dickey-Fuller (with a lag of residuals to be "augmented")."""
     s = series.dropna().values.astype(float)
     if len(s) < 20:
@@ -91,7 +89,7 @@ def _native_adf(series: pd.Series, max_lag: int = 1) -> Tuple[float, float]:
     return stat, p
 
 
-def adf_test(series: pd.Series) -> Tuple[float, float]:
+def adf_test(series: pd.Series) -> tuple[float, float]:
     """Augmented Dickey-Fuller (stat, pvalue). Uses statsmodels if available; else native."""
     try:
         from statsmodels.tsa.stattools import adfuller

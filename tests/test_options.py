@@ -1,13 +1,12 @@
 """Tests for quantforge.options: Black-Scholes, binomial, Monte Carlo, Greeks."""
 import math
+
 import pytest
-import numpy as np
 
-from quantforge.options.black_scholes import bs_call, bs_put, bs_implied_vol, d1, d2
-from quantforge.options.binomial import crr_price, crr_american
+from quantforge.options.binomial import crr_american, crr_price
+from quantforge.options.black_scholes import bs_call, bs_implied_vol, bs_put, d1, d2
+from quantforge.options.greeks import all_greeks, delta, gamma, rho, theta, vega
 from quantforge.options.monte_carlo import mc_european
-from quantforge.options.greeks import delta, gamma, vega, theta, rho, all_greeks
-
 
 # Standard test parameters
 S, K, T, r, sigma = 100.0, 100.0, 1.0, 0.05, 0.20

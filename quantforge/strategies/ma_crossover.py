@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import pandas as pd
 
@@ -21,7 +20,7 @@ class MACrossoverStrategy(Strategy):
     def warmup(self) -> int:
         return self.slow + 2
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if len(history) < self.slow + 2:
             return []
         close = history["close"]

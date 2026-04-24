@@ -1,11 +1,10 @@
 """Order primitives."""
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional
-import uuid
 
 
 class OrderSide(str, Enum):
@@ -34,9 +33,9 @@ class Order:
     quantity: float
     side: OrderSide
     order_type: OrderType = OrderType.MARKET
-    limit_price: Optional[float] = None
-    stop_price: Optional[float] = None
-    created_at: Optional[datetime] = None
+    limit_price: float | None = None
+    stop_price: float | None = None
+    created_at: datetime | None = None
     order_id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
     status: OrderStatus = OrderStatus.PENDING
     filled_qty: float = 0.0

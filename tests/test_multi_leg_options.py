@@ -7,8 +7,14 @@ import numpy as np
 import pytest
 
 from quantforge.options.multi_leg import (
-    bear_put_spread, bull_call_spread, butterfly, calendar_spread,
-    collar, iron_condor, straddle, strangle,
+    bear_put_spread,
+    bull_call_spread,
+    butterfly,
+    calendar_spread,
+    collar,
+    iron_condor,
+    straddle,
+    strangle,
 )
 
 

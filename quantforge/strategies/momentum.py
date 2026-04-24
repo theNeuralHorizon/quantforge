@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import pandas as pd
 
@@ -21,7 +20,7 @@ class MomentumStrategy(Strategy):
     def warmup(self) -> int:
         return self.lookback + 1
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if len(history) < self.lookback + 1:
             return []
         past = history["close"].iloc[-(self.lookback + 1)]

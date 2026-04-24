@@ -3,12 +3,10 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Union
 
 import pandas as pd
 
-
-PathLike = Union[str, os.PathLike]
+PathLike = str | os.PathLike
 
 
 def ensure_dir(path: PathLike) -> Path:

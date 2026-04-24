@@ -7,7 +7,6 @@ funds and AQR-style portable alpha strategies.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -27,7 +26,7 @@ class VolTarget(Strategy):
     min_leverage: float = 0.1
     name: str = "vol_target"
     _last_signal_ts: object = None
-    _asset_vols: Dict[str, float] = field(default_factory=dict)
+    _asset_vols: dict[str, float] = field(default_factory=dict)
 
     def warmup(self) -> int:
         base_warm = self.base.warmup() if self.base is not None else 0
@@ -39,7 +38,7 @@ class VolTarget(Strategy):
             return np.nan
         return float(r.iloc[-self.vol_lookback:].std() * np.sqrt(TRADING_DAYS_YEAR))
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if self.base is None:
             return []
         vol = self._asset_vol(history)

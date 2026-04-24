@@ -4,11 +4,9 @@ plus rolling-window cointegration tracking.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-
 
 # Approximate Engle-Granger critical values (from MacKinnon 2010, no-trend model)
 _EG_CRIT = {
@@ -23,8 +21,8 @@ _EG_CRIT = {
 class CointegrationResult:
     statistic: float
     pvalue: float
-    beta: Optional[np.ndarray]   # cointegration vector
-    residuals: Optional[pd.Series]
+    beta: np.ndarray | None   # cointegration vector
+    residuals: pd.Series | None
     is_cointegrated_95: bool
 
 
@@ -79,8 +77,8 @@ def engle_granger(
 
 
 def johansen_trace(
-    series: pd.DataFrame, max_rank: Optional[int] = None,
-) -> List[dict]:
+    series: pd.DataFrame, max_rank: int | None = None,
+) -> list[dict]:
     """Johansen trace test (Osterwald-Lenum critical values at 5%, approx).
 
     Returns a list, one row per rank r = 0..k-1, with trace_stat and

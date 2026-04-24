@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from quantforge.data.synthetic import generate_ohlcv
 from quantforge.execution.algos import (
-    implementation_shortfall, pov, twap, vwap,
+    implementation_shortfall,
+    pov,
+    twap,
+    vwap,
 )
 from quantforge.execution.impact import (
-    almgren_chriss_schedule, linear_impact, square_root_impact,
+    almgren_chriss_schedule,
+    linear_impact,
+    square_root_impact,
 )
 
 

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import pandas as pd
 
@@ -22,7 +21,7 @@ class RSIReversalStrategy(Strategy):
     def warmup(self) -> int:
         return self.window * 2
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if len(history) < self.window * 2:
             return []
         r = rsi(history["close"], self.window).iloc[-1]

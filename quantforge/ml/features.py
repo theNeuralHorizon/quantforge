@@ -1,16 +1,16 @@
 """Feature engineering for quant ML models."""
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 import numpy as np
 import pandas as pd
 
-from quantforge.indicators.technical import rsi, macd, atr, bollinger_bands
-from quantforge.indicators.statistical import rolling_zscore, realized_vol
+from quantforge.indicators.statistical import realized_vol, rolling_zscore
+from quantforge.indicators.technical import atr, bollinger_bands, macd, rsi
 
 
-def price_features(close: pd.Series, windows: List[int] = [5, 10, 20, 60]) -> pd.DataFrame:
+def price_features(close: pd.Series, windows: list[int] | None = None) -> pd.DataFrame:
+    if windows is None:
+        windows = [5, 10, 20, 60]
     out = pd.DataFrame(index=close.index)
     for w in windows:
         out[f"ret_{w}"] = close.pct_change(w)
@@ -20,7 +20,9 @@ def price_features(close: pd.Series, windows: List[int] = [5, 10, 20, 60]) -> pd
     return out
 
 
-def volume_features(volume: pd.Series, windows: List[int] = [5, 20, 60]) -> pd.DataFrame:
+def volume_features(volume: pd.Series, windows: list[int] | None = None) -> pd.DataFrame:
+    if windows is None:
+        windows = [5, 20, 60]
     out = pd.DataFrame(index=volume.index)
     for w in windows:
         out[f"vol_ratio_{w}"] = volume / volume.rolling(w).mean()
@@ -28,7 +30,9 @@ def volume_features(volume: pd.Series, windows: List[int] = [5, 20, 60]) -> pd.D
     return out
 
 
-def volatility_features(close: pd.Series, windows: List[int] = [10, 21, 60]) -> pd.DataFrame:
+def volatility_features(close: pd.Series, windows: list[int] | None = None) -> pd.DataFrame:
+    if windows is None:
+        windows = [10, 21, 60]
     out = pd.DataFrame(index=close.index)
     r = close.pct_change()
     for w in windows:
@@ -38,7 +42,7 @@ def volatility_features(close: pd.Series, windows: List[int] = [10, 21, 60]) -> 
     return out
 
 
-def cross_sectional_rank(panel: Dict[str, pd.Series]) -> pd.DataFrame:
+def cross_sectional_rank(panel: dict[str, pd.Series]) -> pd.DataFrame:
     """Convert dict of series to a cross-sectional rank (per-timestamp percentile)."""
     wide = pd.DataFrame(panel)
     return wide.rank(axis=1, pct=True)

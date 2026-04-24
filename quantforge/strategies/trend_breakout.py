@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import pandas as pd
 
@@ -21,7 +20,7 @@ class DonchianBreakout(Strategy):
     def warmup(self) -> int:
         return self.entry_window + 1
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if len(history) < self.entry_window + 1:
             return []
         entry = donchian_channel(history, self.entry_window).iloc[-2]  # signal on prior bar to avoid lookahead

@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List
 
 import pandas as pd
 
-from quantforge.core.event import SignalEvent, EventType
+from quantforge.core.event import EventType, SignalEvent
 
 
 class Strategy(ABC):
@@ -16,7 +15,7 @@ class Strategy(ABC):
         return 20
 
     @abstractmethod
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         """Produce signals for this symbol given current bar and full history."""
 
     @staticmethod

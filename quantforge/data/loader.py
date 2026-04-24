@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional
 
 import pandas as pd
 
@@ -20,13 +20,13 @@ def load_csv(path: str | os.PathLike, parse_dates: str = "date") -> pd.DataFrame
 
 @dataclass
 class DataLoader:
-    cache_dir: Optional[str] = None
+    cache_dir: str | None = None
 
     def __post_init__(self) -> None:
         if self.cache_dir:
             Path(self.cache_dir).mkdir(parents=True, exist_ok=True)
 
-    def _cache_path(self, symbol: str, start: str, end: str, interval: str) -> Optional[Path]:
+    def _cache_path(self, symbol: str, start: str, end: str, interval: str) -> Path | None:
         if not self.cache_dir:
             return None
         fname = f"{symbol}_{start}_{end}_{interval}.parquet"

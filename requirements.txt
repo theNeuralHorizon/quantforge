@@ -21,6 +21,7 @@ arch>=7.0
 fastapi>=0.110
 uvicorn[standard]>=0.27
 pydantic>=2.5
+pydantic-settings>=2.2
 slowapi>=0.1.9
 prometheus_client>=0.20
 redis>=5.0
@@ -31,3 +32,5 @@ opentelemetry-api>=1.25
 opentelemetry-sdk>=1.25
 opentelemetry-exporter-otlp-proto-http>=1.25
 opentelemetry-instrumentation-fastapi>=0.46b0
+# CLI extras (ws-tail needs websockets client)
+websockets>=12.0

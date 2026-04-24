@@ -1,8 +1,6 @@
 """Performance attribution models."""
 from __future__ import annotations
 
-from typing import Dict
-
 import numpy as np
 import pandas as pd
 
@@ -12,7 +10,7 @@ def brinson_attribution(
     benchmark_weights: pd.Series,
     portfolio_returns: pd.Series,
     benchmark_returns: pd.Series,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Brinson-Hood-Beebower attribution decomposition.
 
     Returns allocation, selection, interaction, and total.
@@ -35,7 +33,7 @@ def brinson_attribution(
     }
 
 
-def factor_attribution(returns: pd.Series, factor_returns: pd.DataFrame) -> Dict[str, float]:
+def factor_attribution(returns: pd.Series, factor_returns: pd.DataFrame) -> dict[str, float]:
     """Time-series regression: r_t = alpha + sum(beta_i * f_i) + eps."""
     aligned = returns.to_frame("r").join(factor_returns, how="inner").dropna()
     if len(aligned) < 10:
@@ -45,7 +43,7 @@ def factor_attribution(returns: pd.Series, factor_returns: pd.DataFrame) -> Dict
     X1 = np.hstack([np.ones((len(X), 1)), X])
     coef, *_ = np.linalg.lstsq(X1, y, rcond=None)
     alpha = float(coef[0])
-    betas = {c: float(b) for c, b in zip(factor_returns.columns, coef[1:])}
+    betas = {c: float(b) for c, b in zip(factor_returns.columns, coef[1:], strict=False)}
     preds = X1 @ coef
     ss_res = float(((y - preds) ** 2).sum())
     ss_tot = float(((y - y.mean()) ** 2).sum())

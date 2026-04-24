@@ -10,7 +10,6 @@ from quantforge.api.cache import cache_backend, make_key
 from quantforge.api.schemas import MarketDataResponse
 from quantforge.data.loader import DataLoader
 
-
 router = APIRouter(prefix="/v1/market", tags=["market"])
 
 _TICKER_RX = re.compile(r"^[A-Z0-9\-.]{1,10}$")
@@ -38,7 +37,7 @@ def market_data(
     try:
         df = DataLoader(cache_dir="data/cache").yfinance(ticker, start, end)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"data fetch failed: {e}")
+        raise HTTPException(status_code=502, detail=f"data fetch failed: {e}") from e
     if df.empty:
         raise HTTPException(status_code=404, detail="no data")
 

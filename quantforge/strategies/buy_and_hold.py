@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Set
 
 import pandas as pd
 
@@ -17,12 +16,12 @@ class BuyAndHoldStrategy(Strategy):
     Acts as the reference benchmark for any other strategy.
     """
     name: str = "buy_and_hold"
-    _entered: Set[str] = field(default_factory=set)
+    _entered: set[str] = field(default_factory=set)
 
     def warmup(self) -> int:
         return 1
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if symbol in self._entered:
             return []
         self._entered.add(symbol)

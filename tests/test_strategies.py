@@ -1,18 +1,14 @@
 """Tests for quantforge.strategies: signal validity, warmup, direction constraints."""
-import pytest
-import numpy as np
 import pandas as pd
-from datetime import datetime
 
-from quantforge.core.event import SignalEvent, EventType
-from quantforge.strategies.momentum import MomentumStrategy
-from quantforge.strategies.ma_crossover import MACrossoverStrategy
-from quantforge.strategies.mean_reversion import BollingerMeanReversion, MeanReversionStrategy
-from quantforge.strategies.trend_breakout import DonchianBreakout
-from quantforge.strategies.rsi_reversal import RSIReversalStrategy
-from quantforge.strategies.pairs_trading import PairsTradingStrategy
+from quantforge.core.event import EventType, SignalEvent
 from quantforge.data.synthetic import generate_ohlcv
-
+from quantforge.strategies.ma_crossover import MACrossoverStrategy
+from quantforge.strategies.mean_reversion import BollingerMeanReversion
+from quantforge.strategies.momentum import MomentumStrategy
+from quantforge.strategies.pairs_trading import PairsTradingStrategy
+from quantforge.strategies.rsi_reversal import RSIReversalStrategy
+from quantforge.strategies.trend_breakout import DonchianBreakout
 
 # ---------------------------------------------------------------------------
 # Helpers

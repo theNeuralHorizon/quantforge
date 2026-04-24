@@ -5,10 +5,20 @@ import numpy as np
 import pytest
 
 from quantforge.fixed_income.bond import (
-    bond_price, bond_ytm, macaulay_duration, modified_duration, convexity, dv01, bond_cashflows,
+    bond_cashflows,
+    bond_price,
+    bond_ytm,
+    convexity,
+    dv01,
+    macaulay_duration,
+    modified_duration,
 )
 from quantforge.fixed_income.yield_curve import (
-    NelsonSiegel, NelsonSiegelSvensson, discount_factor, forward_rate, bootstrap_zero_curve,
+    NelsonSiegel,
+    NelsonSiegelSvensson,
+    bootstrap_zero_curve,
+    discount_factor,
+    forward_rate,
 )
 
 

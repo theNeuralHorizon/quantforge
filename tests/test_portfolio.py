@@ -1,12 +1,16 @@
 """Tests for quantforge.portfolio: Markowitz, HRP, ERC."""
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 
-from quantforge.portfolio.markowitz import min_variance, max_sharpe, mean_variance, efficient_frontier
 from quantforge.portfolio.hrp import hierarchical_risk_parity
-from quantforge.portfolio.risk_parity import equal_risk_contribution, risk_parity
-
+from quantforge.portfolio.markowitz import (
+    efficient_frontier,
+    max_sharpe,
+    mean_variance,
+    min_variance,
+)
+from quantforge.portfolio.risk_parity import equal_risk_contribution
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -15,9 +19,9 @@ from quantforge.portfolio.risk_parity import equal_risk_contribution, risk_parit
 @pytest.fixture(scope="module")
 def sample_cov():
     """4-asset covariance matrix (positive definite, annualized)."""
-    np.random.seed(0)
+    rng = np.random.default_rng(0)
     # Build via random factor model for positive definiteness
-    F = np.random.randn(4, 4)
+    F = rng.standard_normal((4, 4))
     C = F @ F.T / 4 + np.eye(4) * 0.01
     return C
 

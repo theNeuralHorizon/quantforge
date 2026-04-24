@@ -1,8 +1,6 @@
 """Risk Parity / Equal Risk Contribution portfolio."""
 from __future__ import annotations
 
-from typing import Optional
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -14,7 +12,7 @@ def _cov(cov) -> np.ndarray:
 
 def risk_parity(
     cov: pd.DataFrame | np.ndarray,
-    target: Optional[np.ndarray] = None,
+    target: np.ndarray | None = None,
     total: float = 1.0,
     max_iter: int = 500,
 ) -> np.ndarray:

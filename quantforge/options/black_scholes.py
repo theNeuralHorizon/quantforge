@@ -4,7 +4,6 @@ from __future__ import annotations
 import math
 from typing import Literal
 
-import numpy as np
 from scipy.stats import norm
 
 

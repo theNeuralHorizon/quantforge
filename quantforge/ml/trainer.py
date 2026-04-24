@@ -5,8 +5,8 @@ leak future into past). Reports real accuracy, AUC, log-loss, feature importance
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -14,7 +14,7 @@ import pandas as pd
 
 @dataclass
 class TrainingReport:
-    feature_names: List[str]
+    feature_names: list[str]
     train_acc: float
     val_acc: float
     test_acc: float
@@ -22,12 +22,12 @@ class TrainingReport:
     val_auc: float
     test_auc: float
     baseline_acc: float          # always-predict-majority baseline
-    feature_importances: Dict[str, float]
+    feature_importances: dict[str, float]
     n_train: int
     n_val: int
     n_test: int
-    hp_search: Optional[pd.DataFrame] = None  # grid search results
-    confusion_test: Optional[np.ndarray] = None
+    hp_search: pd.DataFrame | None = None  # grid search results
+    confusion_test: np.ndarray | None = None
 
     def summary(self) -> str:
         lines = [
@@ -75,7 +75,7 @@ def time_order_split(
     y: pd.Series,
     train_frac: float = 0.6,
     val_frac: float = 0.2,
-) -> Tuple[Tuple[pd.DataFrame, pd.Series], Tuple[pd.DataFrame, pd.Series], Tuple[pd.DataFrame, pd.Series]]:
+) -> tuple[tuple[pd.DataFrame, pd.Series], tuple[pd.DataFrame, pd.Series], tuple[pd.DataFrame, pd.Series]]:
     """Split into train/val/test respecting time order (no shuffle)."""
     n = len(X)
     n_train = int(n * train_frac)
@@ -89,13 +89,13 @@ def time_order_split(
 def train_classifier(
     X: pd.DataFrame,
     y: pd.Series,
-    model_cls: Optional[Any] = None,
-    model_kwargs: Optional[Dict[str, Any]] = None,
+    model_cls: Any | None = None,
+    model_kwargs: dict[str, Any] | None = None,
     train_frac: float = 0.6,
     val_frac: float = 0.2,
-    hp_grid: Optional[List[Dict[str, Any]]] = None,
+    hp_grid: list[dict[str, Any]] | None = None,
     verbose: bool = True,
-) -> Tuple[Any, TrainingReport]:
+) -> tuple[Any, TrainingReport]:
     """Train a scikit-learn classifier with time-ordered splits + optional hp grid search.
 
     Returns (fitted_model, TrainingReport).
@@ -107,7 +107,7 @@ def train_classifier(
 
     (Xtr, ytr), (Xva, yva), (Xte, yte) = time_order_split(X, y, train_frac, val_frac)
 
-    grid_results: Optional[pd.DataFrame] = None
+    grid_results: pd.DataFrame | None = None
     best_kwargs = dict(model_kwargs)
 
     if hp_grid:
@@ -153,13 +153,13 @@ def train_classifier(
     # feature importances (sklearn convention)
     fi = getattr(final_model, "feature_importances_", None)
     if fi is not None:
-        importance = dict(zip(X.columns, [float(x) for x in fi]))
+        importance = dict(zip(X.columns, [float(x) for x in fi], strict=False))
     else:
         importance = {}
 
     # confusion
     cm = np.zeros((2, 2), dtype=int)
-    for t, p in zip(yte.values, te_pred):
+    for t, p in zip(yte.values, te_pred, strict=False):
         cm[int(t), int(p)] += 1
 
     report = TrainingReport(
@@ -178,8 +178,8 @@ def train_classifier(
 def walk_forward_train(
     X: pd.DataFrame,
     y: pd.Series,
-    model_cls: Optional[Any] = None,
-    model_kwargs: Optional[Dict[str, Any]] = None,
+    model_cls: Any | None = None,
+    model_kwargs: dict[str, Any] | None = None,
     initial_train: int = 252 * 3,
     step: int = 21,
     verbose: bool = False,

@@ -11,12 +11,12 @@ import os
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Optional
+from typing import ClassVar
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
-
 
 _DEFAULT_DB_FALLBACK = "data/audit.db"
 MAX_ROWS = 200_000
@@ -28,7 +28,7 @@ def _default_db_path() -> str:
 
 
 class AuditLog:
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         db_path = db_path or _default_db_path()
         self.db_path = db_path
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -56,9 +56,9 @@ class AuditLog:
             c.execute("CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit(ts)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_audit_owner ON audit(owner)")
 
-    def append(self, owner: Optional[str], method: str, path: str,
+    def append(self, owner: str | None, method: str, path: str,
                 status: int, latency_ms: float, request_id: str,
-                client_ip: Optional[str] = None) -> None:
+                client_ip: str | None = None) -> None:
         with self._lock, contextlib.closing(self._conn()) as c:
             c.execute(
                 "INSERT INTO audit (ts, owner, method, path, status, latency_ms, request_id, client_ip) "
@@ -74,7 +74,7 @@ class AuditLog:
                 if cutoff:
                     c.execute("DELETE FROM audit WHERE ts < ?", (cutoff[0],))
 
-    def recent(self, limit: int = 100, owner: Optional[str] = None) -> list[dict]:
+    def recent(self, limit: int = 100, owner: str | None = None) -> list[dict]:
         with self._lock, contextlib.closing(self._conn()) as c:
             if owner:
                 rows = c.execute(
@@ -94,10 +94,10 @@ class AuditLog:
         ]
 
 
-_log: Optional[AuditLog] = None
+_log: AuditLog | None = None
 
 
-def get_audit_log(db_path: Optional[str] = None) -> AuditLog:
+def get_audit_log(db_path: str | None = None) -> AuditLog:
     global _log
     if _log is None:
         _log = AuditLog(db_path or _default_db_path())
@@ -111,9 +111,11 @@ def reset_for_tests() -> None:
 
 class AuditMiddleware(BaseHTTPMiddleware):
     # Exact matches (no wildcards) + one prefix for static UI files
-    _EXACT_SKIP = {"/", "/healthz", "/readyz", "/metrics", "/docs", "/redoc",
-                    "/openapi.json", "/favicon.ico"}
-    _PREFIX_SKIP = ("/ui/",)
+    _EXACT_SKIP: ClassVar[set[str]] = {
+        "/", "/healthz", "/readyz", "/metrics", "/docs", "/redoc",
+        "/openapi.json", "/favicon.ico",
+    }
+    _PREFIX_SKIP: ClassVar[tuple[str, ...]] = ("/ui/",)
 
     def __init__(self, app):
         super().__init__(app)

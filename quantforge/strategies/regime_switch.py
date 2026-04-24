@@ -8,9 +8,7 @@ This is a famous defensive strategy that historically reduces drawdowns by ~50%.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
 
-import numpy as np
 import pandas as pd
 
 from quantforge.core.event import SignalEvent
@@ -25,13 +23,13 @@ class RegimeSwitch(Strategy):
     fast_sma: int = 50
     slow_sma: int = 200
     name: str = "regime_switch"
-    _panel: Dict[str, pd.DataFrame] = field(default_factory=dict)
+    _panel: dict[str, pd.DataFrame] = field(default_factory=dict)
     _last_ts: object = None
 
     def warmup(self) -> int:
         return self.slow_sma + 2
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         self._panel[symbol] = history
         if bar.name == self._last_ts:
             return []

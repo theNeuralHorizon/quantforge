@@ -3,17 +3,20 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-import pytest
 
 from quantforge.data.synthetic import generate_correlated_returns, generate_gbm
 from quantforge.stats.cointegration import (
-    engle_granger, half_life_of_mean_reversion, johansen_trace,
+    engle_granger,
+    half_life_of_mean_reversion,
+    johansen_trace,
     rolling_cointegration,
 )
 from quantforge.stats.garch import garch11_fit, garch11_forecast
 from quantforge.stats.regime import detect_structural_breaks, markov_switching_returns
 from quantforge.stats.shrinkage import (
-    constant_correlation_target, ledoit_wolf_shrinkage, oracle_shrinkage,
+    constant_correlation_target,
+    ledoit_wolf_shrinkage,
+    oracle_shrinkage,
     shrunk_covariance,
 )
 

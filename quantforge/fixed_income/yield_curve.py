@@ -1,8 +1,8 @@
 """Yield-curve models and bootstrapping."""
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import List, Sequence, Tuple
 
 import numpy as np
 from scipy.optimize import least_squares
@@ -25,7 +25,7 @@ class NelsonSiegel:
         decay = (1 - np.exp(-x)) / x
         return self.beta0 + self.beta1 * decay + self.beta2 * (decay - np.exp(-x))
 
-    def fit(self, maturities: Sequence[float], yields: Sequence[float]) -> "NelsonSiegel":
+    def fit(self, maturities: Sequence[float], yields: Sequence[float]) -> NelsonSiegel:
         m = np.asarray(maturities, dtype=float)
         y = np.asarray(yields, dtype=float)
 
@@ -59,7 +59,7 @@ class NelsonSiegelSvensson:
         return (self.beta0 + self.beta1 * d1 + self.beta2 * (d1 - np.exp(-x1))
                 + self.beta3 * (d2 - np.exp(-x2)))
 
-    def fit(self, maturities: Sequence[float], yields: Sequence[float]) -> "NelsonSiegelSvensson":
+    def fit(self, maturities: Sequence[float], yields: Sequence[float]) -> NelsonSiegelSvensson:
         m = np.asarray(maturities, dtype=float)
         y = np.asarray(yields, dtype=float)
 
@@ -93,14 +93,14 @@ def forward_rate(r1: float, t1: float, r2: float, t2: float) -> float:
     return float((r2 * t2 - r1 * t1) / (t2 - t1))
 
 
-def zero_to_par_yield(zeros: Sequence[Tuple[float, float]]) -> List[Tuple[float, float]]:
+def zero_to_par_yield(zeros: Sequence[tuple[float, float]]) -> list[tuple[float, float]]:
     """Convert a list of (maturity, zero_rate) to par yields assuming semi-annual coupons.
 
     par_yield(T) = (1 - P(T)) / sum_{i=1..2T} P(i/2)   * 2
     """
     pairs = sorted(zeros)
     out = []
-    for T_idx, (T, _) in enumerate(pairs):
+    for _T_idx, (T, _) in enumerate(pairs):
         halves = np.arange(0.5, T + 1e-9, 0.5)
         pvs = []
         for t in halves:
@@ -116,14 +116,14 @@ def zero_to_par_yield(zeros: Sequence[Tuple[float, float]]) -> List[Tuple[float,
 
 
 def bootstrap_zero_curve(
-    bonds: Sequence[Tuple[float, float, float]]
-) -> List[Tuple[float, float]]:
+    bonds: Sequence[tuple[float, float, float]]
+) -> list[tuple[float, float]]:
     """Bootstrap zero rates from a sequence of (maturity, coupon_rate, price) with face=100.
 
     Assumes bonds are ordered by maturity and pay semi-annually.
     Returns list of (maturity, zero_rate).
     """
-    zeros: List[Tuple[float, float]] = []
+    zeros: list[tuple[float, float]] = []
     freq = 2
     for T, c, price in sorted(bonds, key=lambda x: x[0]):
         n = int(round(T * freq))

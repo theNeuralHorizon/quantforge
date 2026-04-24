@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -28,7 +28,7 @@ class MLClassifierStrategy(Strategy):
     """Trains a classifier on rolling window; predicts next-bar direction."""
     train_window: int = 252
     retrain_every: int = 21
-    model_cls: Optional[Any] = None  # e.g. RandomForestClassifier
+    model_cls: Any | None = None  # e.g. RandomForestClassifier
     model_kwargs: dict = field(default_factory=dict)
     prob_threshold: float = 0.55
     allow_short: bool = True
@@ -68,7 +68,7 @@ class MLClassifierStrategy(Strategy):
         self._model.fit(X, y)
         return True
 
-    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> List[SignalEvent]:
+    def on_bar(self, symbol: str, bar: pd.Series, history: pd.DataFrame) -> list[SignalEvent]:
         if len(history) < self.warmup():
             return []
         if self._model is None or self._bars_since_retrain >= self.retrain_every:

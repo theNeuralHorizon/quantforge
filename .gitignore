@@ -21,3 +21,6 @@ results/
 .DS_Store
 .idea/
 .vscode/
+.claude/
+data/*.db
+data/*.db-*

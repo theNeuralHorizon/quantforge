@@ -1,13 +1,11 @@
 """Vanilla bond pricing, YTM, duration, convexity, DV01."""
 from __future__ import annotations
 
-from typing import List, Tuple
-
 import numpy as np
 from scipy.optimize import brentq
 
 
-def bond_cashflows(face: float, coupon: float, maturity: float, freq: int = 2) -> Tuple[np.ndarray, np.ndarray]:
+def bond_cashflows(face: float, coupon: float, maturity: float, freq: int = 2) -> tuple[np.ndarray, np.ndarray]:
     """Return (times, amounts) arrays for a plain-vanilla coupon bond.
 
     `coupon` is the annual coupon *rate* (e.g. 0.05 = 5%); `face` is face value.
@@ -33,7 +31,7 @@ def bond_price(face: float, coupon: float, ytm: float, maturity: float, freq: in
 
 def bond_ytm(
     price: float, face: float, coupon: float, maturity: float,
-    freq: int = 2, bounds: Tuple[float, float] = (-0.5, 2.0),
+    freq: int = 2, bounds: tuple[float, float] = (-0.5, 2.0),
 ) -> float:
     """Solve YTM from dirty price via Brent's method."""
     def f(y: float) -> float:

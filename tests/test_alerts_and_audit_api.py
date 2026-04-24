@@ -15,8 +15,8 @@ def client():
     tmp.close()
     os.environ["QUANTFORGE_AUDIT_DB"] = tmp.name
 
-    from quantforge.api import auth
     from quantforge.api import audit as audit_mod
+    from quantforge.api import auth
     from quantforge.api.routes import alerts_routes as alerts_mod
     auth.reset_keys()
     auth.register_raw_key("alerts_audit_key_12345")

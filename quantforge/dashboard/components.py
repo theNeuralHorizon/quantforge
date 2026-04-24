@@ -1,14 +1,9 @@
 """Premium UI components — Bloomberg Terminal × Linear/Stripe aesthetic."""
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
-
-import numpy as np
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
 
 # =============================================================================
 # Design tokens
@@ -31,7 +26,7 @@ TEXT_DIM = "#9AA5B8"
 _COLOR_CYCLE = [ACCENT, SUCCESS, PURPLE, WARNING, DANGER, "#FFD66B", "#4FD1C5", "#F687B3"]
 
 
-def _style_layout(fig: go.Figure, title: Optional[str] = None, height: int = 400,
+def _style_layout(fig: go.Figure, title: str | None = None, height: int = 400,
                    show_legend: bool = True) -> go.Figure:
     fig.update_layout(
         title=dict(
@@ -300,7 +295,7 @@ GLOBAL_CSS = f"""
 """
 
 
-def render_pills(items: List[Tuple[str, str]]) -> str:
+def render_pills(items: list[tuple[str, str]]) -> str:
     """Render a row of status pills. Items: (tone, text). Tone in green/cyan/purple/amber."""
     html = '<div class="pill-row">'
     for tone, text in items:
@@ -317,9 +312,9 @@ def render_hero(title: str, subtitle: str) -> str:
 # Chart primitives
 # =============================================================================
 def equity_chart(
-    equities: Dict[str, pd.Series],
+    equities: dict[str, pd.Series],
     title: str = "Equity Curve",
-    benchmark_name: Optional[str] = None,
+    benchmark_name: str | None = None,
     height: int = 450,
 ) -> go.Figure:
     fig = go.Figure()
@@ -431,8 +426,8 @@ def weights_bar(weights: pd.DataFrame, title: str = "Portfolio Weights", height:
 
 def efficient_frontier_chart(
     ef: pd.DataFrame,
-    assets: Optional[pd.DataFrame] = None,
-    tangent: Optional[tuple] = None,
+    assets: pd.DataFrame | None = None,
+    tangent: tuple | None = None,
     title: str = "Efficient Frontier",
     height: int = 460,
 ) -> go.Figure:
@@ -468,7 +463,7 @@ def efficient_frontier_chart(
     return _style_layout(fig, title, height=height)
 
 
-def greeks_gauge(greeks: Dict[str, float]) -> go.Figure:
+def greeks_gauge(greeks: dict[str, float]) -> go.Figure:
     fig = make_subplots(rows=1, cols=5, specs=[[{"type": "indicator"}] * 5],
                          subplot_titles=["Delta", "Gamma", "Vega", "Theta", "Rho"])
     configs = [
@@ -519,7 +514,7 @@ def iv_smile_chart(strikes, injected, recovered, height: int = 360) -> go.Figure
 
 
 def horizontal_bar(df: pd.DataFrame, x_col: str, y_col: str,
-                    title: str = "", color: str = None, height: int = 420) -> go.Figure:
+                    title: str = "", color: str | None = None, height: int = 420) -> go.Figure:
     color = color or ACCENT
     fig = go.Figure()
     fig.add_trace(go.Bar(

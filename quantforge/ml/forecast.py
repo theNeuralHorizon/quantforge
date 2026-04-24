@@ -1,8 +1,6 @@
 """Simple forecasters: AR(1), EWMA, linear regression on features, sequence helper."""
 from __future__ import annotations
 
-from typing import Tuple
-
 import numpy as np
 import pandas as pd
 
@@ -32,7 +30,7 @@ def ewma_forecast(series: pd.Series, span: int = 20, horizon: int = 1) -> float:
     return float(s.ewm(span=span, adjust=False).mean().iloc[-1])
 
 
-def linear_forecast(features: pd.DataFrame, target: pd.Series, test_size: int = 1) -> Tuple[np.ndarray, float]:
+def linear_forecast(features: pd.DataFrame, target: pd.Series, test_size: int = 1) -> tuple[np.ndarray, float]:
     """Fit linear regression, predict the last `test_size` rows. Returns (preds, train_R2)."""
     data = features.join(target.rename("_y")).dropna()
     if len(data) < test_size + 10:
@@ -52,7 +50,7 @@ def linear_forecast(features: pd.DataFrame, target: pd.Series, test_size: int = 
     return preds, r2
 
 
-def make_sequences(series: pd.Series, window: int = 20, horizon: int = 1) -> Tuple[np.ndarray, np.ndarray]:
+def make_sequences(series: pd.Series, window: int = 20, horizon: int = 1) -> tuple[np.ndarray, np.ndarray]:
     """Transform a series into (n_samples, window) X and (n_samples,) y for NN training."""
     s = series.dropna().values.astype(float)
     n = len(s) - window - horizon + 1
