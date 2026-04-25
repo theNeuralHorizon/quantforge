@@ -7,6 +7,7 @@ Rotates automatically once the DB hits 200k rows.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import os
 import sqlite3
 import threading
@@ -131,16 +132,19 @@ class AuditMiddleware(BaseHTTPMiddleware):
         # owner = API-key id (first 8 of sha256); headers['X-Api-Key'] is raw, but
         # we only log the 8-char id we already compute in auth.
         key = request.headers.get("X-API-Key") or ""
-        if key:
-            import hashlib
+        # Cap before hashing — anyone could spam an arbitrarily long
+        # X-API-Key header otherwise, wasting CPU on every audited
+        # request. Real keys top out at 128 chars (verify_api_key
+        # enforces it); anything longer can't be valid anyway.
+        if 0 < len(key) <= 128:
             owner = hashlib.sha256(key.encode()).hexdigest()[:8]
         else:
             owner = "anonymous"
         rid = getattr(request.state, "request_id", "")
         client_ip = request.client.host if request.client else None
-        try:
+        # Never let audit-write failure (disk full, sqlite locked, etc.)
+        # break the response — observability data is best-effort.
+        with contextlib.suppress(Exception):
             self.log.append(owner, request.method, request.url.path,
                              response.status_code, latency_ms, rid, client_ip)
-        except Exception:
-            pass  # never let audit failure break the response
         return response

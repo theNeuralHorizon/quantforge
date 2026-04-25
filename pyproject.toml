@@ -50,5 +50,7 @@ ignore = ["E501", "RUF001", "RUF002", "E741"]
 [tool.ruff.lint.per-file-ignores]
 # Dashboard script does sys.path manipulation before imports
 "quantforge/dashboard/app.py" = ["E402"]
-# Tests may use broad `pytest.raises(Exception)` to cover generic failures
-"tests/**/*.py" = ["B017"]
+# Tests may use broad `pytest.raises(Exception)` to cover generic failures.
+# ERA001 fires on math-explanation comments next to assertions ("# delta =
+# -qty * price"); those are documentation, not dead code.
+"tests/**/*.py" = ["B017", "ERA001"]

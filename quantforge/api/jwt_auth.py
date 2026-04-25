@@ -1,11 +1,14 @@
 """JWT authentication — alternative to API keys. HS256 only; asymmetric optional."""
 from __future__ import annotations
 
+import logging
 import os
 import time
 
 import jwt  # PyJWT
 from fastapi import Header, HTTPException, status
+
+_log = logging.getLogger("quantforge.api.jwt")
 
 _ENV_JWT_SECRET = "QUANTFORGE_JWT_SECRET"
 _ENV_JWT_ISSUER = "QUANTFORGE_JWT_ISSUER"
@@ -71,7 +74,11 @@ def decode_token(token: str) -> dict:
     except jwt.InvalidIssuerError:
         raise HTTPException(status_code=401, detail="invalid issuer") from None
     except jwt.InvalidTokenError as e:
-        raise HTTPException(status_code=401, detail=f"invalid token: {e}") from e
+        # Don't surface the raw PyJWT error string to the caller — the
+        # message can reveal token structure (algorithm confusion, claim
+        # names, etc.). Log it server-side for debugging instead.
+        _log.warning("invalid JWT presented: %s", e)
+        raise HTTPException(status_code=401, detail="invalid token") from e
 
 
 def verify_bearer(authorization: str | None = Header(None)) -> dict:

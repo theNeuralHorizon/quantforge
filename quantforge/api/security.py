@@ -106,7 +106,16 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 
 class MaxBodySizeMiddleware(BaseHTTPMiddleware):
-    """Block requests larger than a configured byte limit. Defends against DoS."""
+    """Block requests larger than a configured byte limit. Defends against DoS.
+
+    Two-layer check:
+      1. Reject early on `Content-Length` header overshoot — cheap, no
+         body read.
+      2. If `Content-Length` is missing (chunked transfer), wrap the
+         ASGI receive callable so the actual streamed body is counted as
+         it arrives. Once the running total exceeds `max_bytes` we abort
+         the request before the handler even sees it.
+    """
 
     def __init__(self, app: FastAPI, max_bytes: int = 1_000_000):
         super().__init__(app)
@@ -120,7 +129,36 @@ class MaxBodySizeMiddleware(BaseHTTPMiddleware):
                 content={"error": "request body too large",
                          "detail": f"max {self.max_bytes} bytes"},
             )
-        return await call_next(request)
+        # Streaming guard: chunked / Content-Length-less requests bypass
+        # the header check above. Wrap the ASGI receive callable so we
+        # count actual bytes as starlette pulls them. State lives in a
+        # mutable dict so the closure can mutate without `nonlocal`.
+        original_receive = request.receive
+        state = {"total": 0, "exceeded": False}
+        max_bytes = self.max_bytes
+
+        async def counted_receive() -> dict:
+            msg = await original_receive()
+            if msg.get("type") == "http.request":
+                body = msg.get("body") or b""
+                state["total"] += len(body)
+                if state["total"] > max_bytes:
+                    state["exceeded"] = True
+                    # Don't pass the over-limit body downstream — return
+                    # an empty terminal frame so the handler sees EOF
+                    # rather than partial data.
+                    return {"type": "http.request", "body": b"", "more_body": False}
+            return msg
+
+        request._receive = counted_receive  # type: ignore[attr-defined]
+        response = await call_next(request)
+        if state["exceeded"]:
+            return JSONResponse(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                content={"error": "request body too large",
+                         "detail": f"max {max_bytes} bytes"},
+            )
+        return response
 
 
 def build_cors_config(extra_origins: list[str] | None = None) -> dict:

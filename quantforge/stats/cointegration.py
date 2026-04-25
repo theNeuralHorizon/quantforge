@@ -48,7 +48,14 @@ def _simple_adf(x: np.ndarray) -> float:
 def engle_granger(
     y: pd.Series, x: pd.Series, significance: float = 0.05,
 ) -> CointegrationResult:
-    """Engle-Granger 2-step cointegration: regress y on x, ADF-test residuals."""
+    """Engle-Granger 2-step cointegration: regress y on x, ADF-test residuals.
+
+    `significance` selects which Engle-Granger critical value drives the
+    `is_cointegrated_95` field. The nominal name preserves backward
+    compatibility — at the default 0.05 you still get 95%-level rejection.
+    """
+    if not 0.0 < significance < 1.0:
+        raise ValueError(f"significance must be in (0, 1), got {significance}")
     df = pd.concat([y.rename("y"), x.rename("x")], axis=1).dropna()
     if len(df) < 30:
         return CointegrationResult(float("nan"), float("nan"), None, None, False)
@@ -72,7 +79,7 @@ def engle_granger(
         statistic=float(stat), pvalue=float(p),
         beta=np.asarray(beta, dtype=float),
         residuals=resid_s,
-        is_cointegrated_95=(p <= 0.05),
+        is_cointegrated_95=(p <= significance),
     )
 
 
@@ -81,8 +88,10 @@ def johansen_trace(
 ) -> list[dict]:
     """Johansen trace test (Osterwald-Lenum critical values at 5%, approx).
 
-    Returns a list, one row per rank r = 0..k-1, with trace_stat and
-    critical value at 5%. When trace_stat > crit, reject "rank <= r".
+    Returns a list, one row per rank r = 0..min(k, max_rank)-1, with
+    trace_stat and 5%-level critical value. When trace_stat > crit,
+    reject "rank <= r". `max_rank` truncates the output for callers who
+    only care about the first few ranks.
     """
     data = series.dropna().values
     k = data.shape[1]
@@ -116,12 +125,15 @@ def johansen_trace(
         return []
 
     eigvals = np.clip(eigvals, 1e-12, 1 - 1e-12)
-    trace_stats = [-n * np.log(1 - eigvals[r:]).sum() for r in range(k)]
+    # Honor max_rank so callers can stop the test early. Bound to k so
+    # an over-large value still produces a sane result.
+    rank_limit = k if max_rank is None else max(0, min(int(max_rank), k))
+    trace_stats = [-n * np.log(1 - eigvals[r:]).sum() for r in range(rank_limit)]
 
     # Approximate 5% critical values from Osterwald-Lenum (no trend)
     ol_crit_5pct = {1: 3.84, 2: 15.49, 3: 29.80, 4: 47.86, 5: 69.82, 6: 95.75}
     rows = []
-    for r in range(k):
+    for r in range(rank_limit):
         # testing H0: rank <= r against H1: rank > r
         k_minus_r = k - r
         crit = ol_crit_5pct.get(k_minus_r, float("inf"))

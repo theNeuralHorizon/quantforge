@@ -6,6 +6,7 @@ POSTs → gets a job_id → polls GET /v1/jobs/{id} until status=='completed'.
 from __future__ import annotations
 
 import json
+import logging
 import threading
 import time
 import uuid
@@ -16,6 +17,8 @@ from enum import Enum
 from typing import Any
 
 from quantforge.api.cache import cache_backend
+
+_log = logging.getLogger("quantforge.api.jobs")
 
 
 class JobStatus(str, Enum):
@@ -66,8 +69,12 @@ class JobManager:
         try:
             cache.set(f"qf:job:{job.id}", json.dumps(job.to_dict(), default=str).encode(),
                        ttl_seconds=3600 * 24)
-        except Exception:
-            pass
+        except Exception as e:
+            # Persistence is best-effort: if Redis is down, in-memory state
+            # still serves the local replica. But silent failure makes
+            # on-call debugging impossible — log a single line per failure
+            # so an SRE can grep for `qf:job persist` in Render's logs.
+            _log.warning("qf:job persist failed for %s: %s", job.id, e)
 
     def _load(self, job_id: str) -> dict | None:
         cache = cache_backend()
@@ -75,8 +82,8 @@ class JobManager:
             raw = cache.get(f"qf:job:{job_id}")
             if raw:
                 return json.loads(raw)
-        except Exception:
-            pass
+        except Exception as e:
+            _log.warning("qf:job load failed for %s: %s", job_id, e)
         return None
 
     def submit(self, kind: str, func: Callable[[Job], Any], params: dict[str, Any],
@@ -100,21 +107,30 @@ class JobManager:
             job.status = JobStatus.RUNNING
             job.started_at = time.time()
             self._persist(job)
+            # Field ordering matters: gc() reads `status` and
+            # `completed_at` without per-job synchronisation. If we wrote
+            # status=COMPLETED before completed_at, gc could see
+            # status=COMPLETED with completed_at still None and treat the
+            # job as ancient (timestamp 0), evicting it instantly. Always
+            # set completed_at *before* the terminal status.
             try:
                 result = func(job)
-                if job._cancel.is_set():
-                    job.status = JobStatus.CANCELLED
-                else:
-                    job.result = result
-                    job.status = JobStatus.COMPLETED
-                    job.progress = 1.0
             except Exception as e:
-                job.status = JobStatus.FAILED
                 job.error = f"{type(e).__name__}: {e}"
                 job.result = None
-            finally:
                 job.completed_at = time.time()
+                job.status = JobStatus.FAILED
                 self._persist(job)
+                return
+            if job._cancel.is_set():
+                job.completed_at = time.time()
+                job.status = JobStatus.CANCELLED
+            else:
+                job.result = result
+                job.progress = 1.0
+                job.completed_at = time.time()
+                job.status = JobStatus.COMPLETED
+            self._persist(job)
 
         self._executor.submit(_wrapped)
         return job
@@ -175,20 +191,26 @@ class JobManager:
         return removed
 
 
-# Singleton manager
+# Singleton manager — guarded by a module-level lock so concurrent
+# initial requests can't both construct a JobManager and abandon one
+# (which would leak the abandoned executor's threads).
 _manager: JobManager | None = None
+_manager_lock = threading.Lock()
 
 
 def get_manager() -> JobManager:
     global _manager
     if _manager is None:
-        _manager = JobManager()
+        with _manager_lock:
+            if _manager is None:  # re-check inside the lock (DCL pattern)
+                _manager = JobManager()
     return _manager
 
 
 def reset_manager() -> None:
     """For tests."""
     global _manager
-    if _manager is not None:
-        _manager._executor.shutdown(wait=False, cancel_futures=True)
-    _manager = None
+    with _manager_lock:
+        if _manager is not None:
+            _manager._executor.shutdown(wait=False, cancel_futures=True)
+        _manager = None

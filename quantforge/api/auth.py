@@ -45,6 +45,22 @@ def _unauth_allowed() -> bool:
     return os.environ.get(_ENV_ALLOW_UNAUTH, "").lower() in ("1", "true", "yes")
 
 
+def check_raw_key(raw_key: str | None) -> str | None:
+    """Shared constant-time key validator. Returns the 8-char owner id on
+    match, None otherwise. Both the HTTP and WebSocket auth paths funnel
+    through here so they have identical timing characteristics — a key
+    insight from review: the WS path previously used `hash in set` which
+    bypasses `hmac.compare_digest` and gives an attacker a different
+    timing profile than the HTTP path."""
+    if not raw_key or len(raw_key) < 8 or len(raw_key) > 128:
+        return None
+    key_hash = _sha256(raw_key)
+    for allowed in _ALLOWED_HASHES:
+        if hmac.compare_digest(key_hash, allowed):
+            return key_hash[:8]
+    return None
+
+
 def verify_api_key(x_api_key: str | None = Header(None, alias="X-API-Key")) -> str:
     """FastAPI dependency: validates the API key header in constant time.
 
@@ -60,16 +76,10 @@ def verify_api_key(x_api_key: str | None = Header(None, alias="X-API-Key")) -> s
             headers={"WWW-Authenticate": "ApiKey"},
         )
 
-    if len(x_api_key) > 128 or len(x_api_key) < 8:
+    owner = check_raw_key(x_api_key)
+    if owner is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid key")
-
-    key_hash = _sha256(x_api_key)
-    for allowed in _ALLOWED_HASHES:
-        if hmac.compare_digest(key_hash, allowed):
-            # Return a stable, safe key id (first 8 hex of hash) for logging
-            return key_hash[:8]
-
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid key")
+    return owner
 
 
 def register_raw_key(raw_key: str) -> None:

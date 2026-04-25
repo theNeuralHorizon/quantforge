@@ -39,9 +39,15 @@ def recent(
     if owner == "anonymous":
         if not _is_demo():
             raise HTTPException(status_code=401, detail="audit requires an API key")
-        # Demo mode: return the global stream with owner masked.
+        # Demo mode: return the global stream with anything that could
+        # de-anonymize a caller (owner hash, client IP) replaced with a
+        # bullet redaction. The path/method/status/latency are fine —
+        # they're just URL surface area which is already public via the
+        # OpenAPI schema.
         rows = get_audit_log().recent(limit=limit, owner=None)
         for r in rows:
-            r["owner"] = "•••"  # never reveal real key hashes to anon callers
+            r["owner"] = "•••"
+            if "client_ip" in r:
+                r["client_ip"] = "•••"
         return rows
     return get_audit_log().recent(limit=limit, owner=owner)

@@ -125,8 +125,19 @@ def get_job(job_id: str, owner: str = Depends(verify_api_key)):
     job = get_manager().get(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
-    # privacy: reject foreign jobs
-    if job.owner and job.owner != owner and owner != "anonymous":
+    # Privacy: a caller may only see a job if (a) the job has no owner
+    # (legacy / system jobs), (b) the job's owner matches the caller, or
+    # (c) BOTH the job and the caller are anonymous (demo-mode self-jobs).
+    # The previous check let any anonymous caller read every job, which
+    # in demo mode meant an unauthenticated visitor could pull
+    # authenticated owners' job results (model metrics, equity curves).
+    job_owner = job.owner
+    if job_owner is None:
+        return job.to_dict()
+    if owner == "anonymous":
+        if job_owner != "anonymous":
+            raise HTTPException(status_code=403, detail="not your job")
+    elif job_owner != owner:
         raise HTTPException(status_code=403, detail="not your job")
     return job.to_dict()
 

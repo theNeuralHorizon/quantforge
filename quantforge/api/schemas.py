@@ -67,11 +67,11 @@ class BacktestRequest(BaseModel):
     @classmethod
     def _uppercase_tickers(cls, v: list[str]) -> list[str]:
         cleaned = []
-        for t in v:
-            t = t.strip().upper()
-            if not t.replace("-", "").replace(".", "").isalnum() or len(t) > 10:
-                raise ValueError(f"invalid ticker: {t}")
-            cleaned.append(t)
+        for raw in v:
+            ticker = raw.strip().upper()
+            if not ticker.replace("-", "").replace(".", "").isalnum() or len(ticker) > 10:
+                raise ValueError(f"invalid ticker: {ticker}")
+            cleaned.append(ticker)
         return cleaned
 
 

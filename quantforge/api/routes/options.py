@@ -1,6 +1,8 @@
 """/v1/options routes."""
 from __future__ import annotations
 
+import math
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from quantforge.api.auth import verify_api_key
@@ -40,6 +42,6 @@ def price_option(req: OptionsPriceRequest, _key: str = Depends(verify_api_key)) 
 @router.post("/iv", response_model=ImpliedVolResponse)
 def implied_vol(req: ImpliedVolRequest, _key: str = Depends(verify_api_key)) -> ImpliedVolResponse:
     iv = bs_implied_vol(req.price, req.S, req.K, req.T, req.r, req.option, req.q)
-    if iv != iv:  # NaN — no solution
+    if math.isnan(iv):  # no solution found by the solver
         raise HTTPException(status_code=422, detail="no implied vol solution (price below intrinsic?)")
     return ImpliedVolResponse(implied_vol=float(iv))

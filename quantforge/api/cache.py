@@ -1,6 +1,7 @@
 """Cache layer: Redis if available, in-memory TTL dict otherwise."""
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import json
 import os
@@ -54,10 +55,8 @@ class _RedisCache:
             return None
 
     def set(self, key: str, value: bytes, ttl_seconds: int = 300) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.client.set(key, value, ex=ttl_seconds)
-        except Exception:
-            pass
 
     def ping(self) -> bool:
         try:
@@ -66,10 +65,8 @@ class _RedisCache:
             return False
 
     def clear(self) -> None:
-        try:
+        with contextlib.suppress(Exception):
             self.client.flushdb()
-        except Exception:
-            pass
 
 
 def _build_cache():
@@ -115,10 +112,8 @@ def cached(namespace: str, ttl_seconds: int = 300):
                 except Exception:
                     pass
             val = fn(**kwargs)
-            try:
+            with contextlib.suppress(Exception):
                 _cache.set(key, json.dumps(val, default=str).encode(), ttl_seconds)
-            except Exception:
-                pass
             return val
         wrapper.__wrapped__ = fn
         wrapper.__name__ = fn.__name__
