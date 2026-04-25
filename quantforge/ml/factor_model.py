@@ -65,5 +65,6 @@ def simulate_fama_french_factors(n: int = 252, seed: int = 42) -> pd.DataFrame:
     ])
     mu = np.array([0.0004, 0.0001, 0.0001])
     returns = rng.multivariate_normal(mu, cov, n)
-    idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=n)
-    return pd.DataFrame(returns, index=idx, columns=["MKT", "SMB", "HML"])
+    # See quantforge.data.synthetic._bday_index for the pandas 3.x rationale.
+    from quantforge.data.synthetic import _bday_index
+    return pd.DataFrame(returns, index=_bday_index(n), columns=["MKT", "SMB", "HML"])

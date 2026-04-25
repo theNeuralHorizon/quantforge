@@ -7,6 +7,25 @@ import numpy as np
 import pandas as pd
 
 
+def _bday_index(n: int) -> pd.DatetimeIndex:
+    """Build a length-`n` business-day index ending on the most recent
+    business day. Robust across pandas 2.x and 3.x:
+    - pandas 2.x's `bdate_range(end=Saturday, periods=n)` returned exactly n
+      entries (silently rolling end back to Friday).
+    - pandas 3.x's `bdate_range(end=Saturday, periods=n)` returns n-1 entries.
+    Snapping `end` to the previous business day before the call gives the
+    same answer on every version.
+    """
+    today = pd.Timestamp.today().normalize()
+    end = pd.tseries.offsets.BDay(0).rollback(today)
+    idx = pd.bdate_range(end=end, periods=n)
+    # Belt-and-braces: if any future pandas changes semantics again, request
+    # one extra and slice. Cheap relative to test flakiness.
+    if len(idx) != n:
+        idx = pd.bdate_range(end=end, periods=n + 1)[-n:]
+    return idx
+
+
 def generate_gbm(
     n: int = 252,
     s0: float = 100.0,
@@ -22,8 +41,7 @@ def generate_gbm(
     shock = sigma * np.sqrt(dt) * z
     log_returns = drift + shock
     prices = s0 * np.exp(np.cumsum(log_returns))
-    idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=n)
-    return pd.Series(prices, index=idx, name="close")
+    return pd.Series(prices, index=_bday_index(n), name="close")
 
 
 def generate_ohlcv(
@@ -70,8 +88,7 @@ def generate_correlated_returns(
         np.fill_diagonal(base, (0.2**2) / 252)
         cov = base
     returns = rng.multivariate_normal(mean=mu, cov=cov, size=n)
-    idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=n)
-    return pd.DataFrame(returns, index=idx, columns=list(symbols))
+    return pd.DataFrame(returns, index=_bday_index(n), columns=list(symbols))
 
 
 def generate_panel(
