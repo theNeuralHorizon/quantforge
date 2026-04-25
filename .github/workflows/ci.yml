@@ -119,6 +119,10 @@ jobs:
     permissions:
       contents: read
     steps:
+      - uses: actions/checkout@v4
+        # Required: vercel deploy uploads from the runner's CWD. Without
+        # this, the deploy job runs in a fresh VM with an empty working
+        # directory and ships zero files.
       - name: Trigger Render deploy
         # RENDER_DEPLOY_HOOK_URL comes from the Render service's Settings →
         # Deploy Hook. If unset, the step is skipped so forks without the
