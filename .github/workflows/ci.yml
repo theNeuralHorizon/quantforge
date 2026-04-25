@@ -135,22 +135,29 @@ jobs:
           echo "Render deploy hook returned HTTP $http_code"
           cat /tmp/render.out || true
           case "$http_code" in 2*) ;; *) exit 1 ;; esac
-      - name: Trigger Vercel deploy
-        # VERCEL_DEPLOY_HOOK_URL comes from Vercel → Project → Settings →
-        # Git → Deploy Hooks. Optional: prefer Vercel's native GitHub
-        # integration, which auto-deploys on push. This step is a belt-and-
-        # braces fallback.
+      - name: Deploy to Vercel via CLI
+        # Uses VERCEL_TOKEN + VERCEL_ORG_ID + VERCEL_PROJECT_ID secrets to
+        # publish a new prod deploy from this exact commit. No hook URL
+        # needed — the CLI authenticates via the token and the project link
+        # is rebuilt fresh in each runner. If any secret is missing the
+        # step skips so forks/PRs without them don't break.
         env:
-          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK_URL }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: |
-          if [ -z "${HOOK:-}" ]; then
-            echo "::notice::VERCEL_DEPLOY_HOOK_URL not configured; skipping Vercel deploy (native integration likely handles it)."
+          if [ -z "${VERCEL_TOKEN:-}" ] || [ -z "${VERCEL_ORG_ID:-}" ] || [ -z "${VERCEL_PROJECT_ID:-}" ]; then
+            echo "::notice::Vercel secrets not all configured; skipping Vercel deploy."
             exit 0
           fi
-          http_code=$(curl -sS -o /tmp/vercel.out -w "%{http_code}" -X POST "$HOOK")
-          echo "Vercel deploy hook returned HTTP $http_code"
-          cat /tmp/vercel.out || true
-          case "$http_code" in 2*) ;; *) exit 1 ;; esac
+          npm i -g vercel@latest --silent
+          vercel pull   --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build  --prod --token="$VERCEL_TOKEN"
+          # `--prebuilt` skips the build step on Vercel's side since we just
+          # built locally — faster and deterministic.
+          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "Deployed to $url"
+          echo "VERCEL_DEPLOYMENT_URL=$url" >> "$GITHUB_ENV"
 
   smoke:
     name: Production smoke test
@@ -235,3 +242,29 @@ jobs:
               esac
               ;;
           esac
+      - name: Verify Vercel rewrites reach Render
+        # PROD_UI_URL points at the Vercel deploy. The UI uses relative
+        # paths (e.g. fetch('/v1/...')); if Vercel's rewrites stop
+        # forwarding to Render, the whole app breaks even though both
+        # individual services would still be "up". This step proves the
+        # full stack works end-to-end from a clean network perspective.
+        env:
+          UI_URL: ${{ vars.PROD_UI_URL }}
+        run: |
+          if [ -z "${UI_URL:-}" ]; then
+            echo "::notice::PROD_UI_URL var not set; skipping Vercel rewrite check."
+            exit 0
+          fi
+          # Static index served by Vercel.
+          title=$(curl -sS -m 60 "$UI_URL/" | grep -oE '<title>[^<]+</title>' | head -1)
+          echo "UI title: $title"
+          echo "$title" | grep -qi "QuantForge Terminal" || { echo "::error::wrong UI served at $UI_URL"; exit 1; }
+          # /v1/* through Vercel's rewrite must reach Render's FastAPI.
+          ver=$(curl -sS -m 90 "$UI_URL/v1/meta/version")
+          echo "/v1/meta/version (via rewrite): $ver"
+          echo "$ver" | grep -q '"version"' || { echo "::error::Vercel /v1/* rewrite is broken"; exit 1; }
+          # Vercel edge security headers — these come from vercel.json.
+          ui_headers=$(curl -sS -m 30 -D- -o /dev/null "$UI_URL/")
+          echo "$ui_headers" | grep -iq '^strict-transport-security:'   || { echo "::error::Vercel HSTS missing";          exit 1; }
+          echo "$ui_headers" | grep -iq '^x-frame-options: *DENY'       || { echo "::error::Vercel X-Frame-Options missing"; exit 1; }
+          echo "OK: Vercel UI + rewrites + edge security headers verified."

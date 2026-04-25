@@ -24,3 +24,5 @@ results/
 .claude/
 data/*.db
 data/*.db-*
+
+.vercel
