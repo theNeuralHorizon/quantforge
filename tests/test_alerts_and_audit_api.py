@@ -101,6 +101,37 @@ class TestAuditAPI:
         # Each row has expected fields
         assert set(rows[0].keys()) >= {"ts", "owner", "method", "path", "status", "latency_ms", "request_id"}
 
+    def test_anonymous_rejected_in_hardened_mode(self, client, monkeypatch):
+        """Without ALLOW_UNAUTH=true, anonymous callers must 401 — this
+        is the privacy contract the audit endpoint enforces. Strip the
+        client's auth header so it looks anonymous."""
+        monkeypatch.delenv("QUANTFORGE_ALLOW_UNAUTH", raising=False)
+        from fastapi.testclient import TestClient
+        bare = TestClient(client.app)
+        r = bare.get("/v1/audit")
+        # auth.verify_api_key returns "anonymous" only when ALLOW_UNAUTH
+        # is truthy. With it unset the dependency itself 401s before our
+        # extra check runs.
+        assert r.status_code == 401
+
+    def test_anonymous_in_demo_mode_returns_masked_stream(self, client, monkeypatch):
+        """With ALLOW_UNAUTH=true the anon caller should see the recent
+        audit stream so the demo UI has something to render — but every
+        owner field must be masked so we don't leak real key hashes."""
+        monkeypatch.setenv("QUANTFORGE_ALLOW_UNAUTH", "true")
+        # Generate traffic via the authenticated client first.
+        client.get("/v1/alerts/rules")
+        client.get("/v1/alerts/events?limit=5")
+        from fastapi.testclient import TestClient
+        bare = TestClient(client.app)
+        r = bare.get("/v1/audit?limit=5")
+        assert r.status_code == 200
+        rows = r.json()
+        assert isinstance(rows, list)
+        assert len(rows) >= 1
+        # Every row's owner is the redaction mark, never a hash.
+        assert all(row["owner"] == "•••" for row in rows), rows
+
 
 class TestCompareEndpoint:
     def test_compare_requires_min_two(self, client):
