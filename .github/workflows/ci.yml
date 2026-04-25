@@ -151,11 +151,12 @@ jobs:
             exit 0
           fi
           npm i -g vercel@latest --silent
-          vercel pull   --yes --environment=production --token="$VERCEL_TOKEN"
-          vercel build  --prod --token="$VERCEL_TOKEN"
-          # `--prebuilt` skips the build step on Vercel's side since we just
-          # built locally — faster and deterministic.
-          url=$(vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          # Don't `vercel build` locally: the CLI's framework auto-detector
+          # sees pyproject.toml + fastapi in requirements.txt and tries to
+          # build a Python serverless function, ignoring our static-site
+          # vercel.json. Server-side `vercel deploy` honors vercel.json
+          # correctly (framework=null, outputDirectory=web).
+          url=$(vercel deploy --prod --yes --token="$VERCEL_TOKEN")
           echo "Deployed to $url"
           echo "VERCEL_DEPLOYMENT_URL=$url" >> "$GITHUB_ENV"
 
