@@ -151,11 +151,18 @@ jobs:
             exit 0
           fi
           npm i -g vercel@latest --silent
-          # Don't `vercel build` locally: the CLI's framework auto-detector
-          # sees pyproject.toml + fastapi in requirements.txt and tries to
+          # `vercel pull` syncs the project's saved settings (framework,
+          # outputDirectory, env vars) into a local .vercel/project.json
+          # so the subsequent `deploy` knows what files to ship and which
+          # output dir to expose. Without this, the CLI ignores
+          # outputDirectory=web and uploads from repo root, leading to
+          # 404s at `/`.
+          # Don't run `vercel build` locally: the CLI's framework
+          # auto-detector sees pyproject.toml + fastapi and tries to
           # build a Python serverless function, ignoring our static-site
-          # vercel.json. Server-side `vercel deploy` honors vercel.json
-          # correctly (framework=null, outputDirectory=web).
+          # config. Server-side `vercel deploy` honors the project
+          # settings correctly.
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
           url=$(vercel deploy --prod --yes --token="$VERCEL_TOKEN")
           echo "Deployed to $url"
           echo "VERCEL_DEPLOYMENT_URL=$url" >> "$GITHUB_ENV"
