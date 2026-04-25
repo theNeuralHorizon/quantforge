@@ -79,6 +79,14 @@
     .card-hoverable:hover { transform: translateY(-1px); box-shadow: 0 10px 30px -12px rgba(0, 217, 255, .18); }
     .pulse-dot { width:8px; height:8px; border-radius:50%; display:inline-block; animation: pulse 2s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    /* Fast attention-pulse fired on each new live event (drives the
+       sidebar counter dots). Halts cleanly after ~600 ms. */
+    .animate-ping-fast { animation: pingFast 600ms ease-out 1; box-shadow: 0 0 0 0 currentColor; }
+    @keyframes pingFast {
+      0%   { box-shadow: 0 0 0 0 rgba(0,217,143,0.6); transform: scale(1); }
+      80%  { box-shadow: 0 0 0 8px rgba(0,217,143,0);  transform: scale(1.6); }
+      100% { box-shadow: 0 0 0 0 rgba(0,217,143,0);   transform: scale(1); }
+    }
 
     /* KPI card: color-coded left strip + sparkline bg */
     .kpi {
@@ -172,7 +180,24 @@
         <a class="nav-item" :class="active===item.id && 'active'" @click="active=item.id">
           <span x-html="item.icon"></span>
           <span x-text="item.label"></span>
-          <span x-show="item.pulse" class="ml-auto"><span class="pulse-dot bg-green"></span></span>
+          <!-- Live counters for the two streaming pages. The pulse-dot
+               class flashes green for 600ms after each new event so the
+               sidebar literally pulses with activity. -->
+          <template x-if="item.id === 'alerts'">
+            <span class="ml-auto flex items-center gap-1.5">
+              <span class="pulse-dot bg-amber" :class="(Date.now() - alerts.lastTickAt) < 600 && 'animate-ping-fast'"></span>
+              <span class="text-[10px] num text-dim" x-text="alerts.totalReceived || ''"></span>
+            </span>
+          </template>
+          <template x-if="item.id === 'live'">
+            <span class="ml-auto flex items-center gap-1.5">
+              <span class="pulse-dot bg-green" :class="(Date.now() - live.lastTickAt) < 600 && 'animate-ping-fast'"></span>
+              <span class="text-[10px] num text-dim" x-text="live.totalReceived || ''"></span>
+            </span>
+          </template>
+          <template x-if="item.id !== 'alerts' && item.id !== 'live' && item.pulse">
+            <span class="ml-auto"><span class="pulse-dot bg-green"></span></span>
+          </template>
         </a>
       </template>
     </nav>
@@ -182,8 +207,21 @@
         <span class="pulse-dot" :class="apiStatus==='ok' ? 'bg-green' : apiStatus==='degraded' ? 'bg-amber' : 'bg-red'"></span>
         <span x-text="apiStatus === 'ok' ? 'Connected' : apiStatus"></span>
       </div>
-      <div class="text-[11px] text-dim mt-1 num" x-text="apiVersion ? 'v'+apiVersion : '—'"></div>
-      <!-- API key hidden for demo - auto-configured -->
+      <div class="text-[11px] text-dim mt-1 num">
+        <span x-text="apiVersion ? 'v'+apiVersion : '—'"></span>
+        <span x-show="apiUptime" class="ml-2" x-text="apiUptime ? '· up '+Math.floor(apiUptime/60)+'m' : ''"></span>
+      </div>
+      <!-- Streaming sub-status: alerts + live signals -->
+      <div class="mt-3 flex flex-wrap gap-3 text-[11px] text-dim">
+        <span class="flex items-center gap-1.5">
+          <span class="pulse-dot" :class="alerts.status==='connected' ? 'bg-amber' : 'bg-border'"></span>
+          <span>alerts <span class="num" x-text="alerts.totalReceived"></span></span>
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="pulse-dot" :class="live.status==='connected' ? 'bg-green' : 'bg-border'"></span>
+          <span>signals <span class="num" x-text="live.totalReceived"></span></span>
+        </span>
+      </div>
     </div>
   </aside>
 
@@ -730,8 +768,55 @@
     <!-- ================ DOCS ================ -->
     <section x-show="active==='docs'">
       <h1 class="font-display text-4xl font-bold">API Reference</h1>
-      <p class="text-dim mt-2">Every endpoint, with copy-pastable curl examples.</p>
-      <div class="card p-5 mt-6">
+      <p class="text-dim mt-2">22 REST endpoints + WebSocket. Auth via <code class="num text-cyan">X-API-Key</code> or JWT bearer.</p>
+
+      <!-- Quick start: base URL + a copy-pasteable curl. Beats burying
+           "where do I even start?" inside Swagger. -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div class="card p-5 md:col-span-1">
+          <div class="text-[11px] uppercase tracking-widest text-dim">Base URL</div>
+          <div class="num text-cyan break-all mt-1" x-text="apiBaseUrl()"></div>
+          <button class="btn-ghost text-[11px] mt-3" @click="copyToClipboard(apiBaseUrl())">⧉ Copy</button>
+          <div class="text-[11px] uppercase tracking-widest text-dim mt-5">Status</div>
+          <div class="flex items-center gap-2 text-[13px] mt-1">
+            <span class="pulse-dot" :class="apiStatus==='ok' ? 'bg-green' : 'bg-red'"></span>
+            <span x-text="apiStatus === 'ok' ? 'live · v'+(apiVersion||'?') : apiStatus"></span>
+          </div>
+        </div>
+        <div class="card p-5 md:col-span-2">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-widest text-dim">Quick start — price an option</div>
+            <button class="btn-ghost text-[11px]" @click="copyToClipboard(curlExample())">⧉ Copy curl</button>
+          </div>
+          <pre class="num text-[12px] mt-2 overflow-x-auto bg-bg p-3 rounded-md border border-border" x-text="curlExample()"></pre>
+        </div>
+      </div>
+
+      <!-- Highlights: 8 most useful endpoints, grouped, with one-liners.
+           Lower friction than scanning the full Swagger before knowing
+           what's there. -->
+      <div class="card p-5 mt-4">
+        <div class="text-[11px] uppercase tracking-widest text-dim">Endpoints at a glance</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-3 text-[13px]">
+          <template x-for="ep in apiHighlights" :key="ep.path">
+            <div class="flex items-baseline gap-3 py-1 border-b border-border last:border-0">
+              <span class="text-[10px] num font-bold uppercase w-12 shrink-0"
+                    :class="{'text-green': ep.method==='GET', 'text-amber': ep.method==='POST', 'text-red': ep.method==='DELETE'}"
+                    x-text="ep.method"></span>
+              <span class="num text-cyan w-56 shrink-0 truncate" x-text="ep.path"></span>
+              <span class="text-dim flex-1" x-text="ep.desc"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Full Swagger — opens inline; "open in new tab" link for those
+           who want a clean view. -->
+      <div class="card p-5 mt-4">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-[11px] uppercase tracking-widest text-dim">Full OpenAPI · Swagger UI</div>
+          <a class="btn-ghost text-[11px]" :href="'/docs'" target="_blank" rel="noopener">Open in new tab ↗</a>
+        </div>
         <iframe src="/docs" class="w-full h-[720px] rounded-md" style="background:#fff;"></iframe>
       </div>
     </section>
@@ -825,9 +910,34 @@ function qf() {
     // Async jobs
     jobs: { list: [], submitting: false, _poll: null },
 
-    // WebSocket: alerts + live signals
-    alerts: { status: 'disconnected', events: [], _ws: null },
-    live:   { status: 'disconnected', events: [], count: 0, last: null, _ws: null },
+    // WebSocket: alerts + live signals. `totalReceived` is monotonic for
+    // the sidebar counter; `lastTickAt` (ms epoch) drives a flash-on-tick
+    // animation. `_backoff` and `_reconnectTimer` are managed by
+    // _connectWs's auto-reconnect logic.
+    alerts: { status: 'disconnected', events: [], totalReceived: 0, lastTickAt: 0,
+              _ws: null, _backoff: 1000, _reconnectTimer: null },
+    live:   { status: 'disconnected', events: [], count: 0, last: null,
+              totalReceived: 0, lastTickAt: 0,
+              _ws: null, _backoff: 1000, _reconnectTimer: null },
+
+    apiUptime: null,
+
+    // API Reference page — curated endpoint highlights so visitors can
+    // see what's available without reading the entire Swagger.
+    apiHighlights: [
+      { method: 'GET',    path: '/healthz',                desc: 'Liveness probe — uptime + version.' },
+      { method: 'GET',    path: '/v1/market/data/{ticker}',desc: 'OHLCV bars for a ticker (yfinance, cached).' },
+      { method: 'POST',   path: '/v1/options/price',       desc: 'Black-Scholes / CRR / Monte-Carlo pricing + Greeks.' },
+      { method: 'POST',   path: '/v1/backtest',            desc: 'Run an event-driven backtest with sizing + rebalance.' },
+      { method: 'POST',   path: '/v1/backtest/compare',    desc: 'Run N strategies in parallel, get a leaderboard.' },
+      { method: 'POST',   path: '/v1/portfolio/optimize',  desc: 'Markowitz / ERC / Black-Litterman / HRP / CVaR-LP.' },
+      { method: 'POST',   path: '/v1/risk/var',            desc: 'VaR — historical, parametric, MC, EVT.' },
+      { method: 'POST',   path: '/v1/ml/train',            desc: 'Train an ML strategy with walk-forward CV.' },
+      { method: 'GET',    path: '/v1/jobs',                desc: 'Async job queue — submit + poll long-running tasks.' },
+      { method: 'GET',    path: '/v1/audit',               desc: 'Recent authenticated API calls (compliance log).' },
+      { method: 'POST',   path: '/v1/alerts/rules',        desc: 'Threshold-based alert rules (Slack/webhook fan-out).' },
+      { method: 'GET',    path: '/ws/events?topic=signals',desc: 'WebSocket: real-time signals, alerts, job events.' },
+    ],
 
     // Bootstrap + error UX
     keyBootstrapped: false,   // true = auto-fetched from /v1/meta/dev-key
@@ -854,6 +964,31 @@ function qf() {
 
     saveApiKey() { localStorage.setItem('qf_api_key', this.apiKey); },
 
+    // Resolve the public API base URL for display in the Reference page.
+    // Uses the qf-api-host meta when the UI is on Vercel, else falls
+    // back to the current origin (works for same-origin Docker deploys).
+    apiBaseUrl() {
+      const meta = (document.querySelector('meta[name="qf-api-host"]') || {}).content || '';
+      return meta ? `https://${meta}` : location.origin;
+    },
+    curlExample() {
+      const base = this.apiBaseUrl();
+      const auth = this.allowUnauth
+        ? '# demo deploy — no API key required'
+        : "  -H 'X-API-Key: <your-key>' \\";
+      return `${auth}
+curl -sS -X POST "${base}/v1/options/price" \\
+  -H 'Content-Type: application/json' \\
+  -d '{
+    "spot": 100, "strike": 100, "rate": 0.05,
+    "vol": 0.2, "tenor": 0.5, "side": "call",
+    "method": "black_scholes"
+  }'`;
+    },
+    async copyToClipboard(text) {
+      try { await navigator.clipboard.writeText(text); } catch (_) {}
+    },
+
     async api(path, init={}) {
       const headers = Object.assign({ 'Content-Type': 'application/json' }, init.headers || {});
       if (this.apiKey) headers['X-API-Key'] = this.apiKey;
@@ -869,11 +1004,13 @@ function qf() {
     async init() {
       this.$watch('active', v => {
         localStorage.setItem('qf_active', v);
-        // lazy-connect WS on first visit to those pages
-        if (v === 'alerts' && !this.alerts._ws) this.connectAlerts();
-        if (v === 'live'   && !this.live._ws)   this.connectLive();
-        if (v === 'jobs')                       this.refreshJobs();
+        if (v === 'jobs') this.refreshJobs();
       });
+      // Connect both event streams immediately so the dashboard feels
+      // alive from the moment the page loads. The sidebar counters tick
+      // whether or not the user has navigated to Alerts or Live yet.
+      this.connectAlerts();
+      this.connectLive();
       try {
         const h = await (await fetch('/healthz')).json();
         this.apiStatus = h.status;
@@ -919,11 +1056,15 @@ function qf() {
       this.$watch('active', () => { this.$nextTick(() => this.renderCharts()); });
       this.$nextTick(() => this.renderCharts());
 
-      // Jobs polling tick: refresh every 3s while on the page
+      // Real-time refresh ticks. Activity feed runs on every page so the
+      // sidebar's recent-events list stays fresh; jobs only refreshes when
+      // the user is on the Jobs tab (heavier payload). The /healthz poll
+      // is folded into _startUptimeClock so we hit Render once per tick.
       this.jobs._poll = setInterval(() => {
-        if (this.active === 'jobs' && (this.apiKey || this.allowUnauth)) this.refreshJobs();
-        if (this.active === 'overview' && (this.apiKey || this.allowUnauth)) this.refreshActivity();
-      }, 5000);
+        if (!this.apiKey && !this.allowUnauth) return;
+        this.refreshActivity();
+        if (this.active === 'jobs') this.refreshJobs();
+      }, 3000);
     },
 
     // ---- Overview leaderboard + activity -----------------------------------
@@ -962,13 +1103,16 @@ function qf() {
       const tick = async () => {
         try {
           const h = await (await fetch('/healthz')).json();
+          this.apiStatus = h.status;
+          this.apiVersion = h.version;
+          this.apiUptime = h.uptime_s;
           const s = Math.floor(h.uptime_s || 0);
           const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
           this.uptimeFmt = hh ? `${hh}h ${mm}m` : mm ? `${mm}m ${ss}s` : `${ss}s`;
           // Synthesize a server-load metric from in-flight jobs + activity rate
           this.serverLoad = Math.min(95, (this.jobs.list.filter(j => j.status === 'running').length * 20)
                                         + Math.min(50, this.activity.length * 2));
-        } catch (_) {}
+        } catch (_) { this.apiStatus = 'unhealthy'; }
       };
       tick();
       this._uptimeTimer = setInterval(tick, 3000);
@@ -1095,33 +1239,56 @@ function qf() {
       }
     },
 
-    connectAlerts() {
-      if (this.alerts._ws) { try { this.alerts._ws.close(); } catch (_) {} }
-      this.alerts.status = 'connecting';
-      this.alerts._ws = this._openWs('alerts', (ev) => {
-        if (ev.type === 'open')  this.alerts.status = 'connected';
-        if (ev.type === 'close') this.alerts.status = 'disconnected';
-        if (ev.type === 'error') this.alerts.status = 'error';
+    // Connect, auto-reconnect with capped exponential backoff. Used for
+    // both alerts and live signals. Survives navigation across tabs so
+    // counters keep ticking even when the user is on Overview/Backtest.
+    _connectWs(channel, topic, onMessage) {
+      const target = this[channel];
+      if (target._ws) { try { target._ws.close(); } catch (_) {} }
+      target.status = 'connecting';
+      const backoff = (target._backoff || 1000);  // start at 1s
+      target._ws = this._openWs(topic, (ev) => {
+        if (ev.type === 'open') {
+          target.status = 'connected';
+          target._backoff = 1000;  // reset on success
+        }
+        if (ev.type === 'close' || ev.type === 'error') {
+          target.status = ev.type === 'error' ? 'error' : 'disconnected';
+          // Schedule a reconnect — only one in flight at a time.
+          if (target._reconnectTimer) return;
+          const wait = Math.min(backoff, 15000);
+          target._backoff = Math.min(backoff * 2, 15000);
+          target._reconnectTimer = setTimeout(() => {
+            target._reconnectTimer = null;
+            this._connectWs(channel, topic, onMessage);
+          }, wait);
+        }
         if (ev.type === 'message' && ev.data.topic !== 'system') {
-          this.alerts.events.unshift(ev.data);
-          if (this.alerts.events.length > 200) this.alerts.events.pop();
+          onMessage(ev.data);
         }
       });
     },
 
+    connectAlerts() {
+      this._connectWs('alerts', 'alerts', (data) => {
+        this.alerts.events.unshift(data);
+        if (this.alerts.events.length > 200) this.alerts.events.pop();
+        // Counter ticks on every alert — drives sidebar pulse.
+        this.alerts.totalReceived = (this.alerts.totalReceived || 0) + 1;
+        this.alerts.lastTickAt = Date.now();
+      });
+    },
+
     connectLive() {
-      if (this.live._ws) { try { this.live._ws.close(); } catch (_) {} }
-      this.live.status = 'connecting';
-      this.live._ws = this._openWs('signals', (ev) => {
-        if (ev.type === 'open')  this.live.status = 'connected';
-        if (ev.type === 'close') this.live.status = 'disconnected';
-        if (ev.type === 'error') this.live.status = 'error';
-        if (ev.type === 'message' && ev.data.topic === 'signals') {
-          this.live.events.unshift(ev.data);
-          this.live.last = ev.data.data;
-          this.live.count = this.live.events.filter(e => (Date.now()/1000 - e.ts) < 60).length;
-          if (this.live.events.length > 200) this.live.events.pop();
-        }
+      this._connectWs('live', 'signals', (data) => {
+        if (data.topic !== 'signals') return;
+        this.live.events.unshift(data);
+        this.live.last = data.data;
+        // Sliding 60-second window for the "signals/min" pill.
+        this.live.count = this.live.events.filter(e => (Date.now()/1000 - e.ts) < 60).length;
+        if (this.live.events.length > 200) this.live.events.pop();
+        this.live.totalReceived = (this.live.totalReceived || 0) + 1;
+        this.live.lastTickAt = Date.now();
       });
     },
 

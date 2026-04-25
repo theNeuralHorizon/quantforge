@@ -164,6 +164,16 @@ def create_app() -> FastAPI:
     except Exception:
         pass
 
+    # Demo broadcaster: emits synthetic signals + alerts on a loop when the
+    # API runs in unauth demo mode, so the UI's Live Signals / Alerts pages
+    # always have a stream to show. No-op when ALLOW_UNAUTH=false.
+    try:
+        from quantforge.api.demo_broadcaster import start as start_demo
+        start_demo(app)
+    except Exception:  # pragma: no cover
+        import logging
+        logging.getLogger("quantforge.api").exception("failed to start demo broadcaster")
+
     return app
 
 
