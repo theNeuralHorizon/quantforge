@@ -831,6 +831,7 @@ function qf() {
 
     // Bootstrap + error UX
     keyBootstrapped: false,   // true = auto-fetched from /v1/meta/dev-key
+    allowUnauth: false,       // true when server has QUANTFORGE_ALLOW_UNAUTH=true
     overviewError: null,      // surfaced when Overview KPIs fail to load
 
     // Overview — leaderboard + activity + live stats
@@ -879,11 +880,17 @@ function qf() {
         this.apiVersion = h.version;
       } catch (e) { this.apiStatus = 'unhealthy'; }
 
-      // First-visit bootstrap: pull the auto-generated dev key so the
-      // dashboard Just Works. Also validates the cached key; if it doesn't
-      // match this server's current dev key, replace it.
+      // First-visit bootstrap: detect server posture so the dashboard
+      // Just Works without the user having to fish for an API key.
+      //   dev_mode + dev_key → local dev: auto-fill the generated key
+      //   allow_unauth       → public demo deploy: skip the key prompt;
+      //                        all API calls go anonymously
+      //   neither            → prod hardened: user must paste a key
       try {
         const meta = await (await fetch('/v1/meta/dev-key')).json();
+        if (meta && meta.allow_unauth) {
+          this.allowUnauth = true;
+        }
         if (meta && meta.dev_mode && meta.dev_key) {
           if (!this.apiKey) {
             this.apiKey = meta.dev_key;
@@ -914,14 +921,14 @@ function qf() {
 
       // Jobs polling tick: refresh every 3s while on the page
       this.jobs._poll = setInterval(() => {
-        if (this.active === 'jobs' && this.apiKey) this.refreshJobs();
-        if (this.active === 'overview' && this.apiKey) this.refreshActivity();
+        if (this.active === 'jobs' && (this.apiKey || this.allowUnauth)) this.refreshJobs();
+        if (this.active === 'overview' && (this.apiKey || this.allowUnauth)) this.refreshActivity();
       }, 5000);
     },
 
     // ---- Overview leaderboard + activity -----------------------------------
     async loadLeaderboard() {
-      if (!this.apiKey || this.leaderboardLoading) return;
+      if ((!this.apiKey && !this.allowUnauth) || this.leaderboardLoading) return;
       this.leaderboardLoading = true;
       try {
         const mk = (strategy, params, size=0.5, rebalance='weekly') => ({
@@ -944,7 +951,7 @@ function qf() {
     },
 
     async refreshActivity() {
-      if (!this.apiKey) return;
+      if (!this.apiKey && !this.allowUnauth) return;
       try {
         const r = await this.api('/v1/audit?limit=20');
         this.activity = r || [];
@@ -1035,7 +1042,7 @@ function qf() {
 
     // ---- Jobs ---------------------------------------------------------------
     async refreshJobs() {
-      if (!this.apiKey) return;
+      if (!this.apiKey && !this.allowUnauth) return;
       try {
         this.jobs.list = await this.api('/v1/jobs?limit=20');
       } catch (e) { /* silent */ }
@@ -1142,7 +1149,7 @@ function qf() {
     async loadOverview() {
       this.overviewError = null;
       const tickers = ['SPY', 'QQQ', 'IWM', 'TLT', 'GLD'];
-      if (!this.apiKey) {
+      if (!this.apiKey && !this.allowUnauth) {
         this.overviewError = "No API key set. Click the 'API key' section in the sidebar to enter one.";
         return;
       }

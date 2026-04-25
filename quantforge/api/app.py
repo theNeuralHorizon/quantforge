@@ -127,14 +127,20 @@ def create_app() -> FastAPI:
 
     @app.get("/v1/meta/dev-key", include_in_schema=False)
     def _dev_key():
-        """Auto-bootstrap the web UI. Returns the dev API key ONLY when the
-        server is running without QUANTFORGE_API_KEYS set (i.e. local dev).
-        Never exposes real keys in production.
+        """Auto-bootstrap the web UI. Returns:
+          - dev_key: the auto-generated dev key when QUANTFORGE_API_KEYS is
+            unset (local dev). Always None in prod — real keys are never
+            exposed.
+          - allow_unauth: whether QUANTFORGE_ALLOW_UNAUTH is true, so the
+            UI can skip the "enter API key" prompt and just call the API
+            anonymously (demo deploys).
         """
         from quantforge.api.auth import get_dev_key_if_dev_mode, is_dev_mode
+        allow_unauth = os.environ.get("QUANTFORGE_ALLOW_UNAUTH", "").lower() in ("1", "true", "yes")
         return {
             "dev_mode": is_dev_mode(),
             "dev_key": get_dev_key_if_dev_mode(),  # None when prod
+            "allow_unauth": allow_unauth,
         }
 
     # Serve the static web UI if it exists
