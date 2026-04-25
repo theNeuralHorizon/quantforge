@@ -1,5 +1,14 @@
 # Deployment — Vercel (frontend) + Render (backend)
 
+> **Live deployment** (as of last verified run):
+> - API: `https://quantforge-api.onrender.com` (Render free plan, sleeps after 15 min idle, no persistent disk).
+> - UI: deploy via Vercel — see step 2 below.
+> - Mode: **demo** (`QUANTFORGE_ALLOW_UNAUTH=true`). The `/v1/*` routes
+>   accept unauthenticated requests so visitors can play with the terminal
+>   without an API key. To harden, flip the env var to `false` in the
+>   Render dashboard and set `EXPECT_UNAUTH=false` (or unset) in the GitHub
+>   repo variables — the `smoke` job will start enforcing 401/403.
+
 The production topology splits the UI and the API across two platforms:
 
 ```
@@ -74,31 +83,52 @@ The browser only ever talks to the Vercel origin. Vercel proxies API paths
 
 ### 2. Deploy the frontend to Vercel
 
-1. **Edit `web/index.html`** to wire the WebSocket host. Vercel's edge
-   rewrites don't proxy WebSocket upgrades, so the UI needs to open its
-   `wss://` connection straight at Render. Find this line near the top:
-   ```html
-   <meta name="qf-api-host" content="" />
-   ```
-   Set `content` to the bare host of your Render service — no scheme, no
-   path. Example:
-   ```html
-   <meta name="qf-api-host" content="quantforge-api.onrender.com" />
-   ```
-   Plain HTTP calls still go through Vercel's rewrites; only `/ws/*`
-   connections read this override.
+The WebSocket host is already wired in `web/index.html`:
+```html
+<meta name="qf-api-host" content="quantforge-api.onrender.com" />
+```
+Plain HTTP calls go through Vercel's rewrites; `/ws/*` reads this meta
+and connects straight to Render (Vercel rewrites don't carry WS
+upgrades). If you change the Render service name, update this line and
+the `destination` URLs in `vercel.json` together.
 
-2. In Vercel: **Add New** → **Project** → import this GitHub repo.
-3. Vercel picks up [`vercel.json`](./vercel.json) automatically. No build
-   command, no framework — it just serves the `web/` directory.
-4. No environment variables needed on Vercel in the default setup. (The
-   Render API URL is hardcoded in `vercel.json`.)
-5. Click **Deploy**. After ~30 s, visit the URL Vercel gives you.
-6. Smoke test: open the site, click around, hit **Health**. You should see
-   a green pill — that's a real round-trip to Render via Vercel's rewrite.
-   Then open the **Alerts** page to confirm WebSocket connects too.
-7. (Optional) Under **Settings** → **Git** → **Deploy Hooks**, generate a
-   hook URL for later use in CI.
+#### Option A — Vercel CLI (one-time login)
+```bash
+npm i -g vercel        # if not installed
+vercel login           # opens browser once
+vercel link            # pick the team + project (creates .vercel/project.json)
+vercel --prod          # deploys
+```
+After the first `vercel link`, every subsequent `vercel --prod` is a
+single command — no flags needed because `vercel.json` is in the repo.
+
+#### Option B — Vercel dashboard (no CLI)
+1. **Add New** → **Project** → import `theNeuralHorizon/quantforge`.
+2. **Framework Preset**: Other (Vercel will read `vercel.json` directly).
+3. **Root Directory**: `.` (default).
+4. **Build / Output Settings**: leave defaults — `vercel.json`'s
+   `outputDirectory: "web"` handles it.
+5. **Environment Variables**: none required.
+6. Click **Deploy**. Visit the URL Vercel gives you (typically
+   `<project>.vercel.app`).
+
+#### After either path
+
+7. Smoke-test through the browser:
+   - Hit `/healthz` → should return `{"status":"ok",...}` (proxied to
+     Render).
+   - Open the terminal UI, click **Health** → green pill.
+   - Open the **Alerts** page, watch the WS pill go green.
+8. If your Vercel URL isn't `https://quantforge.vercel.app` or
+   `https://quantforge-terminal.vercel.app`, append it to
+   `QUANTFORGE_CORS_ORIGINS` in the Render dashboard (comma-separated).
+9. (Optional) **Settings** → **Git** → **Deploy Hooks** → generate a
+   hook URL for CI.
+
+> **Re-using an existing `quantforge.vercel.app` slug.** If that name is
+> already taken by an unrelated project (e.g. a marketing landing page),
+> import this repo under a different name (e.g. `quantforge-terminal`).
+> Vercel only allows one project per slug per account.
 
 ### 3. Wire Render's URL back into CORS
 
@@ -122,13 +152,18 @@ curl -I -H "Origin: https://evil.example.com" \
 Set GitHub repo secrets and vars:
 
 ```bash
-# Replace the URLs with the ones you generated in steps 1.6 and 2.6.
+# Replace the URLs with the ones you generated in steps 1.6 and 2.7.
 gh secret set RENDER_DEPLOY_HOOK_URL -b '<render-hook-url>'
 gh secret set VERCEL_DEPLOY_HOOK_URL -b '<vercel-hook-url>'   # optional
 
-# This is a *variable* (not a secret) — used by the smoke-test job to
-# probe the live API. Safe to expose.
-gh variable set PROD_API_URL -b 'https://<your-service>.onrender.com'
+# Variables (not secrets) — used by the smoke-test job. Safe to expose.
+gh variable set PROD_API_URL    -b 'https://quantforge-api.onrender.com'
+
+# Tell the smoke job whether prod should reject unauthenticated /v1/*
+# requests. Set to `true` for demo deploys (matches the live config in
+# this repo); set to `false` (or leave unset) once you flip
+# QUANTFORGE_ALLOW_UNAUTH=false on Render.
+gh variable set EXPECT_UNAUTH   -b 'true'
 ```
 
 The next push to `main` will trigger:
@@ -136,9 +171,18 @@ The next push to `main` will trigger:
 1. `test` + `lint` + `security-scan` (unchanged)
 2. `docker-build` (pushes image to GHCR — still happens, independent of deploy)
 3. `deploy` — POSTs to both deploy hooks
-4. `smoke` — polls `/healthz` until the new build is live, then confirms
-   `/v1/meta/version` returns **401** without an API key (proves
-   `ALLOW_UNAUTH=false` stuck)
+4. `smoke` — polls `/healthz` until the new build is live (free-plan cold
+   start can take 30–60 s), asserts the three security headers are
+   present (`Strict-Transport-Security`, `X-Content-Type-Options`,
+   `X-Frame-Options`), then enforces the `EXPECT_UNAUTH` contract:
+   - `EXPECT_UNAUTH=true` → `/v1/meta/version` must return **200** *and*
+     `/v1/meta/dev-key` must report `dev_mode=false` so demo mode
+     isn't accidentally leaking a dev key.
+   - `EXPECT_UNAUTH=false` (or unset) → `/v1/meta/version` must return
+     **401/403**.
+
+   Either way, anything else (5xx, network error, missing header, leaked
+   dev key) fails the job and surfaces a clear error.
 
 ---
 
