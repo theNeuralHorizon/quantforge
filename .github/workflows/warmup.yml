@@ -2,36 +2,56 @@ name: warmup
 
 # Render's free plan sleeps after ~15 minutes of idle traffic. A cold
 # wake takes 30-60 seconds, which is a terrible first impression for
-# anyone landing on the live demo via a LinkedIn post or HN link. This
-# workflow pings /healthz every 14 minutes so the container stays warm
-# during ordinary daytime hours. It's free (public repo, ~5s per run)
-# and skips automatically if PROD_API_URL isn't set.
+# anyone landing on the live demo.
+#
+# Strategy: ping every 8 minutes (a healthy 2× safety margin under the
+# 15-minute idle threshold) and exercise three paths per ping so the
+# whole hot path stays warm: /healthz (Python startup), /v1/meta/version
+# (auth + middleware chain), and /v1/audit?limit=1 (sqlite path).
+# Public repos get unlimited Actions minutes, so cadence is free.
 
 on:
   schedule:
-    # Every 14 minutes — under Render's 15-minute idle timeout.
-    - cron: "*/14 * * * *"
-  # Also wake on demand from the Actions tab.
+    - cron: "*/8 * * * *"
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   ping:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - name: Wake the API
+      - name: Wake API across multiple paths
         env:
           API_URL: ${{ vars.PROD_API_URL }}
+          UI_URL: ${{ vars.PROD_UI_URL }}
         run: |
           if [ -z "${API_URL:-}" ]; then
-            echo "::notice::PROD_API_URL not set; skipping."
+            echo "::notice::PROD_API_URL not set; skipping warmup."
             exit 0
           fi
-          # Generous timeout because the first hit may cold-start (30-60s).
-          # We don't fail the workflow on a non-2xx — Render restarts and
-          # transient blips shouldn't spam the Actions inbox.
-          code=$(curl -sS -m 90 -o /tmp/body -w "%{http_code}" "$API_URL/healthz" || echo "000")
-          ttfb=$(curl -sS -m 90 -o /dev/null -w "%{time_starttransfer}" "$API_URL/healthz" || echo "?")
-          body=$(cat /tmp/body 2>/dev/null || echo "")
-          echo "HTTP $code · ttfb $ttfb · $body"
+          # First hit may cold-start (30-60s); allow 90s. Subsequent
+          # hits are instant since the container is now warm.
+          probe() {
+            local label="$1" url="$2" budget="${3:-30}"
+            local code ttfb
+            code=$(curl -sS -m "$budget" -o /tmp/body -w "%{http_code}" "$url" || echo "000")
+            ttfb=$(curl -sS -m "$budget" -o /dev/null -w "%{time_starttransfer}" "$url" || echo "?")
+            local body
+            body=$(head -c 200 /tmp/body 2>/dev/null || echo "")
+            echo "$label HTTP $code  ttfb=${ttfb}s  body=$body"
+          }
+          probe "[api healthz]"  "$API_URL/healthz" 90
+          probe "[api version]"  "$API_URL/v1/meta/version" 30
+          probe "[api audit  ]"  "$API_URL/v1/audit?limit=1" 30
+          # Vercel never sleeps, but a UI ping once per cycle proves the
+          # whole pipeline (DNS + TLS + edge + rewrite) end-to-end.
+          if [ -n "${UI_URL:-}" ]; then
+            probe "[ui  root   ]" "$UI_URL/" 30
+            probe "[ui  rewrite]" "$UI_URL/v1/meta/version" 30
+          fi
+          # Don't fail the workflow on transient blips — a flaky ping
+          # shouldn't spam the Actions inbox. The schedule retries every
+          # 8 minutes anyway.
+          exit 0

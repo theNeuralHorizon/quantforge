@@ -13,6 +13,35 @@
        falls back to `location.host` when empty. -->
   <meta name="qf-api-host" content="quantforge-api.onrender.com" />
 
+  <!-- Privacy-first analytics via GoatCounter (no cookies, no PII, GDPR
+       OK). Sign up at https://www.goatcounter.com/signup, choose a code
+       like `quantforge`, then set this meta `content` to your code.
+       Leave empty to disable analytics entirely. The script tag below
+       reads this meta and only injects the GC counter when it's set, so
+       a fresh fork loads zero analytics by default. -->
+  <meta name="qf-goatcounter-code" content="" />
+  <script>
+    // Conditional GoatCounter loader — runs once at parse time. Skips
+    // entirely on file://, localhost, and 127.0.0.1 so dev hits don't
+    // pollute prod stats. Anything else (preview deploys, custom domains)
+    // counts normally. The user can override that gate by appending
+    // `?gc=1` to the URL.
+    (function () {
+      var meta = document.querySelector('meta[name="qf-goatcounter-code"]');
+      var code = (meta && meta.content || '').trim();
+      if (!code) return;
+      var loc = location.hostname || '';
+      var localish = loc === 'localhost' || loc === '127.0.0.1' || loc === '';
+      var optIn = location.search.indexOf('gc=1') !== -1;
+      if (localish && !optIn) return;
+      var s = document.createElement('script');
+      s.async = true;
+      s.dataset.goatcounter = 'https://' + code + '.goatcounter.com/count';
+      s.src = '//gc.zgo.at/count.js';
+      document.head.appendChild(s);
+    })();
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">

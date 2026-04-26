@@ -4,11 +4,11 @@
 
 [**🌐 Live demo →**](https://quantforge-nu.vercel.app) · [**📚 API reference →**](https://quantforge-api.onrender.com/docs) · [**🔬 OpenAPI →**](https://quantforge-api.onrender.com/openapi.json)
 
-![CI](https://github.com/theNeuralHorizon/quantforge/actions/workflows/ci.yml/badge.svg) ![tests](https://img.shields.io/badge/tests-489%20passing-brightgreen) ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.14-blue) ![license](https://img.shields.io/badge/license-MIT-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) ![k8s](https://img.shields.io/badge/kubernetes-ready-326ce5)
+![CI](https://github.com/theNeuralHorizon/quantforge/actions/workflows/ci.yml/badge.svg) ![warmup](https://github.com/theNeuralHorizon/quantforge/actions/workflows/warmup.yml/badge.svg) ![tests](https://img.shields.io/badge/tests-489%20passing-brightgreen) ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.14-blue) ![license](https://img.shields.io/badge/license-MIT-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) ![k8s](https://img.shields.io/badge/kubernetes-ready-326ce5)
 
 QuantForge is an end-to-end quant research stack: Python library + hardened REST API + real-time web terminal + Streamlit dashboard + CLI, all in one repo.
 
-> **Try it now** — the [live terminal](https://quantforge-nu.vercel.app) runs on Render's free tier so the first hit takes ~30s to wake. Subsequent navigation is instant. The Live Signals + Alerts pages stream synthetic events over WebSocket so you can watch the dashboard pulse in real time. No login, no API key — demo mode is on by design.
+> **Try it now** — the [live terminal](https://quantforge-nu.vercel.app) is kept warm by an 8-minute GitHub Actions cron so visits are instant. The Live Signals + Alerts pages stream synthetic events over WebSocket so you can watch the dashboard pulse in real time. No login, no API key — demo mode is on by design.
 
 **What's in the box**
 - **Library** — 12 strategies, 25+ indicators, options pricing, portfolio optimizers, risk analytics, ML trainer
@@ -109,6 +109,47 @@ pytest tests/ -q
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — Module map + event flow
 - [docs/QUICKSTART.md](docs/QUICKSTART.md) — 60-second tour
 - [docs/STRATEGIES.md](docs/STRATEGIES.md) — Strategy reference + how to write your own
+- [DEPLOYMENT.md](DEPLOYMENT.md) — Vercel + Render deployment guide
+- [SECURITY.md](SECURITY.md) — Security posture + production checklist
+
+## Operations
+
+### Keeping the live demo warm
+Render's free plan sleeps after 15 minutes of idle traffic. The
+[`warmup.yml`](./.github/workflows/warmup.yml) GitHub Action pings
+`/healthz`, `/v1/meta/version`, `/v1/audit?limit=1`, the Vercel root,
+and the Vercel→Render rewrite every 8 minutes — a 2× safety margin
+under the idle threshold and full coverage of the hot path. Public-repo
+Actions are free, so this costs nothing. If the badge above goes red,
+the demo may cold-start on the next visit (still works, just ~30s).
+
+For belt-and-braces, point a third-party uptime monitor at
+`https://quantforge-api.onrender.com/healthz`:
+- **UptimeRobot** — 50 free monitors at 5-min cadence, email/webhook alerts.
+- **Better Stack** — 10 free monitors at 3-min cadence, public status page.
+- **HetrixTools** — 60 free monitors at 1-min cadence.
+
+Any one of those is enough. The status badge from your monitor of
+choice can drop straight under the CI badges above.
+
+### Privacy-first analytics
+Visitor analytics are wired through [GoatCounter](https://www.goatcounter.com/)
+— no cookies, no PII, GDPR-clean — and gated behind a single meta tag
+in [`web/index.html`](./web/index.html):
+
+```html
+<meta name="qf-goatcounter-code" content="" />
+```
+
+To turn it on:
+1. Sign up at https://www.goatcounter.com/signup (free for OSS / non-commercial).
+2. Pick a code (e.g. `quantforge`) — that becomes your subdomain.
+3. Set `content="quantforge"` on the meta tag and push.
+
+The script is a no-op while the meta is empty, and it auto-skips
+`localhost` / `127.0.0.1` so your own dev hits don't pollute prod
+stats. Append `?gc=1` to a URL to override that gate when you need to
+debug.
 
 ## License
-MIT
+MIT — see [LICENSE](./LICENSE).
