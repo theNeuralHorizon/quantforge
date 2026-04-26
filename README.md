@@ -12,7 +12,7 @@
 [![gitleaks](https://github.com/theNeuralHorizon/quantforge/actions/workflows/gitleaks.yml/badge.svg)](https://github.com/theNeuralHorizon/quantforge/actions/workflows/gitleaks.yml)
 [![uptime](https://img.shields.io/badge/uptime-monitored-brightgreen?logo=uptimerobot&logoColor=white)](https://stats.uptimerobot.com/6glZXHXYmV)
 
-![tests](https://img.shields.io/badge/tests-489%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-491%20passing-brightgreen)
 ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.14-blue)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![docker](https://img.shields.io/badge/docker-ready-2496ed?logo=docker&logoColor=white)
@@ -310,8 +310,8 @@ graph LR
     Push[git push main]:::trigger
 
     subgraph Validate[parallel validate]
-        T11[test 3.11<br/>489 pytest]:::ci
-        T12[test 3.12<br/>489 pytest]:::ci
+        T11[test 3.11<br/>491 pytest]:::ci
+        T12[test 3.12<br/>491 pytest]:::ci
         Lint[ruff lint]:::ci
         Sec[bandit + safety]:::ci
         CQ[CodeQL<br/>py + js]:::ci
@@ -418,7 +418,7 @@ python -m uvicorn quantforge.api.app:app      # → http://localhost:8000
 #  /metrics    Prometheus
 
 # tests
-pytest tests/ -q          # 489 passed in ~30s
+pytest tests/ -q          # 491 passed in ~30s
 ruff check quantforge tests
 bandit -r quantforge/ -ll
 ```
@@ -507,7 +507,7 @@ Local API auto-generates a dev key on startup and prints it once to stderr. Ever
 
 ## Test coverage
 
-`pytest tests/ -q` — **489 passed in ~30 s** on Python 3.14, ~25 s on 3.12 in CI.
+`pytest tests/ -q` — **491 passed in ~30 s** on Python 3.14, ~25 s on 3.12 in CI.
 
 | Suite | Tests | Covers |
 |---|---:|---|
