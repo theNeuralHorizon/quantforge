@@ -2,9 +2,9 @@
 
 **A Full-Stack Quantitative Trading Research Platform**
 
-[**🌐 Live demo →**](https://quantforge-nu.vercel.app) · [**📚 API reference →**](https://quantforge-api.onrender.com/docs) · [**🔬 OpenAPI →**](https://quantforge-api.onrender.com/openapi.json)
+[**🌐 Live demo →**](https://quantforge-nu.vercel.app) · [**📚 API reference →**](https://quantforge-api.onrender.com/docs) · [**🔬 OpenAPI →**](https://quantforge-api.onrender.com/openapi.json) · [**📈 Status →**](https://stats.uptimerobot.com/6glZXHXYmV)
 
-![CI](https://github.com/theNeuralHorizon/quantforge/actions/workflows/ci.yml/badge.svg) ![warmup](https://github.com/theNeuralHorizon/quantforge/actions/workflows/warmup.yml/badge.svg) ![tests](https://img.shields.io/badge/tests-489%20passing-brightgreen) ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.14-blue) ![license](https://img.shields.io/badge/license-MIT-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) ![k8s](https://img.shields.io/badge/kubernetes-ready-326ce5)
+![CI](https://github.com/theNeuralHorizon/quantforge/actions/workflows/ci.yml/badge.svg) ![warmup](https://github.com/theNeuralHorizon/quantforge/actions/workflows/warmup.yml/badge.svg) [![uptime](https://img.shields.io/badge/uptime-monitored-brightgreen?logo=uptimerobot&logoColor=white)](https://stats.uptimerobot.com/6glZXHXYmV) ![tests](https://img.shields.io/badge/tests-489%20passing-brightgreen) ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.14-blue) ![license](https://img.shields.io/badge/license-MIT-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) ![k8s](https://img.shields.io/badge/kubernetes-ready-326ce5)
 
 QuantForge is an end-to-end quant research stack: Python library + hardened REST API + real-time web terminal + Streamlit dashboard + CLI, all in one repo.
 
@@ -123,14 +123,22 @@ under the idle threshold and full coverage of the hot path. Public-repo
 Actions are free, so this costs nothing. If the badge above goes red,
 the demo may cold-start on the next visit (still works, just ~30s).
 
-For belt-and-braces, point a third-party uptime monitor at
-`https://quantforge-api.onrender.com/healthz`:
-- **UptimeRobot** — 50 free monitors at 5-min cadence, email/webhook alerts.
-- **Better Stack** — 10 free monitors at 3-min cadence, public status page.
-- **HetrixTools** — 60 free monitors at 1-min cadence.
+### Public status page
+Live uptime + 90-day history at
+[**stats.uptimerobot.com/6glZXHXYmV**](https://stats.uptimerobot.com/6glZXHXYmV).
+A free **UptimeRobot** monitor pings `/healthz` every 5 minutes from
+their network — that's a second, independent warm-keeper running in
+parallel with the GitHub Actions cron, so even a multi-hour Actions
+outage wouldn't put the demo to sleep. The page also doubles as a
+public SLA breadcrumb if anyone ever asks "is your service actually
+up?".
 
-Any one of those is enough. The status badge from your monitor of
-choice can drop straight under the CI badges above.
+To upgrade the README's static "monitored" badge to a live uptime
+percentage:
+1. UptimeRobot → **My Settings → Monitor-specific API Keys → Create**
+   for the *QuantForge API* monitor → copy the key (starts with `m`).
+2. Replace the badge URL in `README.md` with
+   `https://img.shields.io/uptimerobot/ratio/30/<that-key>`.
 
 ### Privacy-first analytics
 Visitor analytics are wired through [GoatCounter](https://www.goatcounter.com/)
