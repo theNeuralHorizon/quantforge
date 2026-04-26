@@ -2,9 +2,13 @@
 
 **A Full-Stack Quantitative Trading Research Platform**
 
-![tests](https://img.shields.io/badge/tests-322%20passing-brightgreen) ![coverage](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue) ![license](https://img.shields.io/badge/license-MIT-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) ![k8s](https://img.shields.io/badge/kubernetes-ready-326ce5)
+[**🌐 Live demo →**](https://quantforge-nu.vercel.app) · [**📚 API reference →**](https://quantforge-api.onrender.com/docs) · [**🔬 OpenAPI →**](https://quantforge-api.onrender.com/openapi.json)
 
-QuantForge is an end-to-end quant research stack: Python library + hardened REST API + web terminal + dashboard + CLI, all in one repo.
+![CI](https://github.com/theNeuralHorizon/quantforge/actions/workflows/ci.yml/badge.svg) ![tests](https://img.shields.io/badge/tests-489%20passing-brightgreen) ![python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.14-blue) ![license](https://img.shields.io/badge/license-MIT-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) ![k8s](https://img.shields.io/badge/kubernetes-ready-326ce5)
+
+QuantForge is an end-to-end quant research stack: Python library + hardened REST API + real-time web terminal + Streamlit dashboard + CLI, all in one repo.
+
+> **Try it now** — the [live terminal](https://quantforge-nu.vercel.app) runs on Render's free tier so the first hit takes ~30s to wake. Subsequent navigation is instant. The Live Signals + Alerts pages stream synthetic events over WebSocket so you can watch the dashboard pulse in real time. No login, no API key — demo mode is on by design.
 
 **What's in the box**
 - **Library** — 12 strategies, 25+ indicators, options pricing, portfolio optimizers, risk analytics, ML trainer
