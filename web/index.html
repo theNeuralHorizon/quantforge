@@ -155,6 +155,28 @@
                   border: 1px solid #2A3247; border-radius: 99px;
                   font-size: 12px; backdrop-filter: blur(8px); }
 
+    /* Jargon tooltip — hover the dotted-underlined term to see a plain-
+       English explanation. Built CSS-only so it works without JS state.
+       Term gets `qf-term`; the popup is a `qf-tip` span next to it. */
+    .qf-term {
+      border-bottom: 1px dashed #4A5878; cursor: help;
+      position: relative; display: inline;
+    }
+    .qf-term .qf-tip {
+      position: absolute; bottom: 100%; left: 0; margin-bottom: 6px;
+      background: #141A2E; color: #F0F2F6;
+      border: 1px solid #2A3247; border-radius: 8px;
+      padding: 8px 12px; font-size: 12px; line-height: 1.5;
+      width: max-content; max-width: 320px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.5);
+      opacity: 0; transform: translateY(4px); pointer-events: none;
+      transition: opacity 150ms ease, transform 150ms ease;
+      z-index: 50; font-weight: 400;
+      white-space: normal;
+    }
+    .qf-term:hover .qf-tip,
+    .qf-term:focus-within .qf-tip { opacity: 1; transform: translateY(0); }
+
     /* Command palette */
     .cmdk-overlay { position: fixed; inset: 0; z-index: 100;
                     background: rgba(7, 9, 15, .72); backdrop-filter: blur(8px); }
@@ -277,6 +299,10 @@
           <span class="pulse-dot bg-amber"></span>
           <span class="num text-text" x-text="alerts.events.length + ' alerts'"></span>
         </span>
+        <button class="stat-pill text-dim hover:text-cyan transition-colors" @click="openWelcome()" title="What is this?">
+          <span class="num">?</span>
+          <span>What is this?</span>
+        </button>
         <button class="stat-pill text-dim hover:text-cyan transition-colors" @click="cmdkOpen = true" title="Cmd/Ctrl+K">
           <span class="num">⌘K</span>
           <span>Quick nav</span>
@@ -463,7 +489,7 @@
     <!-- ================ OPTIONS ================ -->
     <section x-show="active==='options'">
       <h1 class="font-display text-4xl font-bold">Options Lab</h1>
-      <p class="text-dim mt-2">Price vanilla + American + exotics side-by-side with live Greeks.</p>
+      <p class="text-dim mt-2">Price <span class="qf-term">vanilla<span class="qf-tip">A standard call/put option — pays off based on the underlying stock at expiry.</span></span> + <span class="qf-term">American<span class="qf-tip">Like vanilla but the holder can exercise any time before expiry, not just at expiry.</span></span> + <span class="qf-term">exotics<span class="qf-tip">Path-dependent options (Asian = average price, lookback = best price seen, barrier = activates if a price level is hit). Priced via Monte Carlo here.</span></span> side-by-side with live <span class="qf-term">Greeks<span class="qf-tip">Sensitivities of the option price: <b>Delta</b> = move per $1 in stock, <b>Gamma</b> = how Delta itself moves, <b>Vega</b> = move per 1% volatility, <b>Theta</b> = decay per day, <b>Rho</b> = move per 1% interest rate.</span></span>.</p>
 
       <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-6">
         <div><div class="text-[11px] uppercase text-dim mb-1">Spot</div><input type="number" class="input w-full num" x-model.number="opt.S"></div>
@@ -507,7 +533,7 @@
     <!-- ================ BACKTEST ================ -->
     <section x-show="active==='backtest'">
       <h1 class="font-display text-4xl font-bold">Strategy Backtest</h1>
-      <p class="text-dim mt-2">Plug any of 11 strategies into real ETF data and compare against buy-and-hold.</p>
+      <p class="text-dim mt-2">Plug any of 11 strategies into real ETF data and compare against <span class="qf-term">buy-and-hold<span class="qf-tip">Just buy on day one and never trade. The simplest baseline; most strategies should beat it after fees, or they're not worth the complexity.</span></span>. Watch out for <span class="qf-term">drawdown<span class="qf-tip">The peak-to-trough loss during a bad period. A 20% max drawdown means at the worst point, the strategy was 20% below its all-time high.</span></span> and the <span class="qf-term">Sharpe ratio<span class="qf-tip">Return earned per unit of risk. Sharpe &gt; 1 is decent, &gt; 2 is great, &gt; 3 is too good to be true (probably overfitting).</span></span>.</p>
 
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
         <div>
@@ -570,7 +596,7 @@
     <!-- ================ PORTFOLIO ================ -->
     <section x-show="active==='portfolio'">
       <h1 class="font-display text-4xl font-bold">Portfolio Optimizer</h1>
-      <p class="text-dim mt-2">Max-Sharpe, Min-Variance, ERC, and HRP on real returns.</p>
+      <p class="text-dim mt-2">Decide what % of money goes into each stock. <span class="qf-term">Max-Sharpe<span class="qf-tip">Pick weights that maximize return-per-unit-of-risk. Classical Markowitz mean-variance optimization.</span></span>, <span class="qf-term">Min-Variance<span class="qf-tip">Pick weights that minimize portfolio volatility, ignoring expected returns. Tends to over-allocate to low-vol assets like bonds.</span></span>, <span class="qf-term">ERC<span class="qf-tip">Equal Risk Contribution. Each asset contributes the same amount of risk to the portfolio total. Robust to bad return forecasts.</span></span>, and <span class="qf-term">HRP<span class="qf-tip">Hierarchical Risk Parity. Clusters correlated assets into a tree, then allocates risk down the tree. No matrix inversion → no instability.</span></span> on real returns.</p>
 
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
         <div>
@@ -613,7 +639,7 @@
     <!-- ================ RISK ================ -->
     <section x-show="active==='risk'">
       <h1 class="font-display text-4xl font-bold">Risk Analysis</h1>
-      <p class="text-dim mt-2">VaR / CVaR across 4 methods, with histogram.</p>
+      <p class="text-dim mt-2"><span class="qf-term">VaR<span class="qf-tip">Value at Risk. The loss you'd <i>not</i> exceed on (say) 95% of days — so a 95% 1-day VaR of 2% means: on a typical day you'll lose at most 2%. The other 5% of days can be much worse.</span></span> / <span class="qf-term">CVaR<span class="qf-tip">Conditional Value at Risk (a.k.a. Expected Shortfall). The average loss <i>on the bad days</i> — i.e. given you exceeded VaR, how bad was it? Tail-aware where VaR isn't.</span></span> across 4 methods, with histogram. Try them all — they disagree, and that disagreement is the point.</p>
 
       <div class="grid grid-cols-3 gap-3 mt-6">
         <div>
@@ -654,7 +680,7 @@
     <!-- ================ ML ================ -->
     <section x-show="active==='ml'">
       <h1 class="font-display text-4xl font-bold">ML Training</h1>
-      <p class="text-dim mt-2">Real SPY → 20+ features → time-ordered train/val/test. Honest overfitting visible.</p>
+      <p class="text-dim mt-2">Real SPY → 20+ <span class="qf-term">features<span class="qf-tip">Numerical inputs computed from the raw price (RSI, moving averages, Bollinger position, volatility, etc.). The model sees only these, never the raw price directly.</span></span> → <span class="qf-term">time-ordered train/val/test<span class="qf-tip">In finance you can't shuffle data — that would let the model peek at the future. The data is split chronologically: train on 2010-2018, validate on 2019-2021, test on 2022-2024.</span></span>. Honest <span class="qf-term">overfitting<span class="qf-tip">When a model memorises noise in the training data instead of the signal. Train accuracy goes up while validation accuracy goes down. We show both so you can see it happen live.</span></span> visible.</p>
 
       <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-6">
         <div><div class="text-[11px] uppercase text-dim mb-1">Ticker</div><input class="input w-full num" x-model="ml.ticker"></div>
@@ -853,6 +879,45 @@
   </main>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════════════════
+     Welcome modal — first-visit only, dismissible, re-openable via "?"
+     button in the header. Plain-English glossary so a non-quant visitor
+     coming from a LinkedIn post can navigate without bouncing.
+     ═══════════════════════════════════════════════════════════════════ -->
+<div x-show="welcomeOpen" x-cloak @click.self="dismissWelcome()" class="cmdk-overlay">
+  <div class="cmdk-panel" style="max-width:760px; max-height:88vh; overflow-y:auto;">
+    <div class="p-6 border-b border-border">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <div class="font-display text-2xl font-bold" style="background:linear-gradient(90deg,#00D9FF,#00D98F);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">
+            Welcome to QuantForge
+          </div>
+          <p class="text-dim text-sm mt-1">A live demo of a quantitative trading research platform — no login, no API key, click anywhere.</p>
+        </div>
+        <button class="btn-ghost" @click="dismissWelcome()" title="Close (Esc)">✕</button>
+      </div>
+    </div>
+    <div class="p-6 space-y-3">
+      <div class="text-[11px] uppercase tracking-widest text-dim mb-2">What each tab does — in plain English</div>
+      <template x-for="g in welcomeGuide" :key="g.tab">
+        <button class="w-full text-left flex items-start gap-3 p-3 rounded-md border border-border hover:border-cyan transition-colors"
+                @click="active = g.tab; dismissWelcome()">
+          <span class="text-xl flex-shrink-0" x-text="g.emoji"></span>
+          <span class="flex-1">
+            <span class="font-medium text-sm capitalize" x-text="nav.find(n => n.id === g.tab)?.label || g.tab"></span>
+            <span class="block text-[12px] text-dim mt-0.5" x-text="g.oneLiner"></span>
+          </span>
+          <span class="text-[10px] num text-dim self-center">open →</span>
+        </button>
+      </template>
+    </div>
+    <div class="px-6 py-3 border-t border-border flex items-center justify-between text-[11px] text-dim">
+      <span>This is a hosted demo — synthetic data on the streams, real ETF data on backtests.</span>
+      <button class="btn-primary text-xs" @click="dismissWelcome()">Got it, let me explore</button>
+    </div>
+  </div>
+</div>
+
 <!-- Command palette (Cmd/Ctrl + K) -->
 <div x-show="cmdkOpen" x-cloak @click.self="cmdkOpen = false" class="cmdk-overlay">
   <div class="cmdk-panel">
@@ -987,11 +1052,38 @@ function qf() {
     cmdkQuery: '',
     cmdkIdx: 0,
 
+    // First-visit welcome modal — explains what each tab does in plain
+    // English so a non-quant visitor doesn't bounce off the jargon.
+    // Persisted dismissal in localStorage so returning visitors aren't
+    // pestered. The header's "?" button can re-open it any time.
+    welcomeOpen: localStorage.getItem('qf_welcome_seen') !== 'true',
+    welcomeGuide: [
+      { tab: 'overview',  emoji: '◆', oneLiner: 'A snapshot dashboard. Live KPIs, top performers, recent activity.' },
+      { tab: 'options',   emoji: '◈', oneLiner: 'Options are contracts that pay off based on stock prices. Type a stock + strike + time, see the price + how it changes when stock moves.' },
+      { tab: 'backtest',  emoji: '⚗', oneLiner: 'Pick a trading strategy + a stock + a date range. Re-runs the strategy day-by-day on real history and shows: did this idea make money?' },
+      { tab: 'portfolio', emoji: '◎', oneLiner: 'Given a basket of stocks, what % of money goes into each one? Five different academic methods, one click apart.' },
+      { tab: 'risk',      emoji: '⚠', oneLiner: 'How much could you lose on a really bad day? Computes "Value-at-Risk" four different ways so you can see why no single answer is right.' },
+      { tab: 'ml',        emoji: '✦', oneLiner: 'Train a machine-learning model on past stock data and watch it overfit honestly. Feature importance + train/val/test split shown.' },
+      { tab: 'jobs',      emoji: '⏱', oneLiner: 'Long-running backtests + ML training run here without freezing the page.' },
+      { tab: 'alerts',    emoji: '🔔', oneLiner: 'Set rules like "alert me when drawdown > 5%". Live event stream over WebSocket.' },
+      { tab: 'live',      emoji: '📡', oneLiner: 'Strategy buy/sell signals stream in live. The demo broadcaster fires synthetic ones every ~3 seconds so the page is never empty.' },
+      { tab: 'docs',      emoji: '📚', oneLiner: 'Every API endpoint with copy-pasteable curl examples. Open /docs in a new tab for the full Swagger.' },
+    ],
+
     // helpers
     fmt(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return (+v).toFixed(d); },
     pct(v, d=2) { if (v == null || Number.isNaN(v)) return '—'; return ((+v)*100).toFixed(d)+'%'; },
 
     saveApiKey() { localStorage.setItem('qf_api_key', this.apiKey); },
+
+    // First-visit welcome modal helpers.
+    dismissWelcome() {
+      this.welcomeOpen = false;
+      localStorage.setItem('qf_welcome_seen', 'true');
+    },
+    openWelcome() {
+      this.welcomeOpen = true;
+    },
 
     // Resolve the public API base URL for display in the Reference page.
     // Uses the qf-api-host meta when the UI is on Vercel, else falls
