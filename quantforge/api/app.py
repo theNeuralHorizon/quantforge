@@ -106,12 +106,16 @@ def create_app() -> FastAPI:
     def _root():
         return HTMLResponse(_root_html(__version__))
 
-    @app.get("/healthz", response_model=HealthResponse)
+    # Liveness + readiness probes accept both GET and HEAD so load-
+    # balancer / uptime-monitor HEAD probes (UptimeRobot, AWS ALB,
+    # GCP HTTP LB, Render's own probe) get a 200 instead of FastAPI's
+    # default 405 Method Not Allowed.
+    @app.api_route("/healthz", methods=["GET", "HEAD"], response_model=HealthResponse)
     def healthz():
         return HealthResponse(status="ok", version=__version__,
                                uptime_s=time.time() - _START_TIME)
 
-    @app.get("/readyz", response_model=ReadinessResponse)
+    @app.api_route("/readyz", methods=["GET", "HEAD"], response_model=ReadinessResponse)
     def readyz():
         checks = {"cache": bool(cache_backend().ping())}
         ready = all(checks.values())

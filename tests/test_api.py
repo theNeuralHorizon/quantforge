@@ -26,6 +26,19 @@ class TestHealth:
         r = client.get("/readyz")
         assert r.status_code == 200
 
+    def test_healthz_accepts_HEAD(self, client):
+        # Load balancers + UptimeRobot + AWS ALB + Render's own probe
+        # all default to HEAD requests for liveness checks. FastAPI's
+        # default decorator only registers GET, returning 405 on HEAD —
+        # which is exactly what broke our UptimeRobot monitor before
+        # we used api_route(methods=["GET", "HEAD"]).
+        r = client.head("/healthz")
+        assert r.status_code == 200, "HEAD must succeed for LB probes"
+
+    def test_readyz_accepts_HEAD(self, client):
+        r = client.head("/readyz")
+        assert r.status_code == 200
+
     def test_metrics(self, client):
         r = client.get("/metrics")
         assert r.status_code == 200
