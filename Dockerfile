@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.7
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Non-root user (security baseline)
 RUN groupadd -r qf && useradd -r -g qf -u 10001 -d /app -s /usr/sbin/nologin qf
