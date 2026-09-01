@@ -82,7 +82,7 @@ jobs:
         # can contain uppercase letters.
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/quantforge" >> "$GITHUB_OUTPUT"
       - name: Build and push API image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile
