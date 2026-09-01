@@ -18,7 +18,7 @@ hypothesis>=6.100
 numba>=0.59
 arch>=7.0
 # API + security
-fastapi>=0.110
+fastapi>=0.136.1
 uvicorn[standard]>=0.27
 pydantic>=2.5
 pydantic-settings>=2.2
